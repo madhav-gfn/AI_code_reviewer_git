@@ -1,0 +1,14 @@
+{
+  "name": "mygit",
+  "version": "0.1.0",
+  "description": "AI-powered code reviewer wrapper around Git",
+  "builtin-baseline": "a0b1c8d3a477c1cb4813d8e127a56961707ca42b",
+  "dependencies": [
+    "nlohmann-json",
+    "fmt",
+    "spdlog",
+    "sqlite3",
+    "ftxui",
+    "catch2"
+  ]
+}

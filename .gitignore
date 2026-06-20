@@ -1,0 +1,21 @@
+build/
+out/
+.cache/
+
+# vcpkg manifest mode local install dir (if not using a shared install)
+vcpkg_installed/
+
+# Generated/runtime data
+logs/*.log
+logs/*.db
+*.gguf
+
+# Editor / IDE
+.vs/
+.vscode/
+*.user
+CMakeUserPresets.json
+
+# OS
+.DS_Store
+Thumbs.db
