@@ -1,5 +1,6 @@
 #include "commands/review_command.h"
 
+#include <exception>
 #include <iostream>
 
 #include "ai/llama_client.h"
@@ -22,8 +23,14 @@ int run_review() {
     const ai::PromptBuilder prompt_builder;
     const std::string prompt = prompt_builder.build_review_prompt(diff);
 
-    const ai::LlamaClient llama_client;
-    const std::string raw_response = llama_client.review(prompt);
+    std::string raw_response;
+    try {
+        const ai::LlamaClient llama_client;
+        raw_response = llama_client.review(prompt);
+    } catch (const std::exception& e) {
+        std::cerr << "AI review unavailable: " << e.what() << "\n";
+        return 1;
+    }
 
     const parsers::JsonParser parser;
     const ReviewResult review_result = parser.parse_review(raw_response);

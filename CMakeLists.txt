@@ -10,13 +10,13 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # --- Dependencies (V1) -------------------------------------------------
-# libgit2 and llama.cpp are intentionally not required yet:
+# libgit2 is intentionally not required yet:
 #   - FR-2 ships with shell-command git access first, libgit2 is V2.
-#   - ai/llama_client is a stub interface until the model runtime is wired in.
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(SQLite3 REQUIRED)
+find_package(llama CONFIG REQUIRED)
 
 # --- Core library --------------------------------------------------------
 add_library(mygit_core
@@ -43,6 +43,7 @@ target_link_libraries(mygit_core PUBLIC
     fmt::fmt
     spdlog::spdlog
     SQLite::SQLite3
+    llama
 )
 
 target_compile_options(mygit_core PRIVATE

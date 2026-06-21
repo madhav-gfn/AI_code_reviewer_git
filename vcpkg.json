@@ -9,6 +9,7 @@
     "spdlog",
     "sqlite3",
     "ftxui",
-    "catch2"
+    "catch2",
+    "llama-cpp"
   ]
 }
