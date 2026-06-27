@@ -1,4 +1,4 @@
-#include "commands/push_command.h"
+#include "commands/commit_command.h"
 
 #include <exception>
 #include <iostream>
@@ -14,7 +14,7 @@
 
 namespace mygit::commands {
 
-int run_push(const std::string& remote, const std::string& branch, bool force_ai) {
+int run_commit(const std::string& message) {
     config::MygitConfig cfg;
     try {
         cfg = config::load_config();
@@ -26,8 +26,8 @@ int run_push(const std::string& remote, const std::string& branch, bool force_ai
     const git::GitDiff diff_provider;
     const std::string diff = diff_provider.get_staged_diff();
     if (diff.empty()) {
-        std::cout << "\n  No staged changes — pushing directly.\n\n";
-        return git::run_git("push " + remote + " " + branch);
+        std::cout << "\n  Nothing staged to commit.\n\n";
+        return 0;
     }
 
     const ai::PromptBuilder prompt_builder;
@@ -51,11 +51,15 @@ int run_push(const std::string& remote, const std::string& branch, bool force_ai
     ui::print_report(result);
 
     const decision_engine::DecisionEngine engine;
-    const bool allowed = engine.should_allow(result, force_ai);
-    ui::print_verdict(allowed, force_ai && !result.safe);
+    const bool allowed = engine.should_allow(result, /*force_ai=*/false);
+    ui::print_verdict(allowed, false);
 
     if (!allowed) return 1;
-    return git::run_git("push " + remote + " " + branch);
+
+    const std::string git_args = message.empty()
+        ? "commit"
+        : "commit -m \"" + message + "\"";
+    return git::run_git(git_args);
 }
 
 }  // namespace mygit::commands

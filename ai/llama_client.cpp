@@ -54,6 +54,8 @@ int resolve_gpu_layers(int n_gpu_layers) {
 void ensure_backend_initialized() {
     static bool initialized = false;
     if (!initialized) {
+        // Silence ggml/llama diagnostic output that would otherwise spam stderr.
+        llama_log_set([](enum ggml_log_level, const char*, void*) {}, nullptr);
         ggml_backend_load_all();
         llama_backend_init();
         initialized = true;

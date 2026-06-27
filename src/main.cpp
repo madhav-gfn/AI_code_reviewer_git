@@ -2,21 +2,30 @@
 #include <string>
 #include <vector>
 
+#include "commands/commit_command.h"
 #include "commands/push_command.h"
 #include "commands/review_command.h"
+#include "commands/setup_command.h"
+#include "ui/terminal_ui.h"
 
 namespace {
 
 void print_usage() {
-    std::cout << "Usage:\n"
-              << "  mygit push <remote> <branch> [--force-ai]\n"
-              << "  mygit commit\n"
-              << "  mygit review\n";
+    std::cout << "\n"
+              << "  Usage:\n"
+              << "    mygit setup                         -- configure model path\n"
+              << "    mygit review                        -- review staged changes\n"
+              << "    mygit commit [-m \"message\"]         -- review then commit\n"
+              << "    mygit push <remote> <branch>        -- review then push\n"
+              << "    mygit push <remote> <branch> --force-ai\n"
+              << "\n";
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
+    mygit::ui::enable_colors();
+
     const std::vector<std::string> args(argv + 1, argv + argc);
 
     if (args.empty()) {
@@ -26,35 +35,41 @@ int main(int argc, char** argv) {
 
     const std::string& command = args[0];
 
-    if (command == "push") {
-        bool force_ai = false;
-        std::vector<std::string> positional;
-        for (size_t i = 1; i < args.size(); ++i) {
-            if (args[i] == "--force-ai") {
-                force_ai = true;
-            } else {
-                positional.push_back(args[i]);
-            }
-        }
-        if (positional.size() < 2) {
-            std::cerr << "Error: push requires <remote> <branch>\n";
-            print_usage();
-            return 1;
-        }
-        return mygit::commands::run_push(positional[0], positional[1], force_ai);
-    }
-
-    if (command == "commit") {
-        // TODO: FR-8 commit message generation + FR-9 pre-commit hook review.
-        std::cout << "mygit commit: not yet implemented\n";
-        return 0;
+    if (command == "setup") {
+        return mygit::commands::run_setup();
     }
 
     if (command == "review") {
         return mygit::commands::run_review();
     }
 
-    std::cerr << "Unknown command: " << command << "\n";
+    if (command == "commit") {
+        std::string message;
+        for (size_t i = 1; i + 1 < args.size(); ++i) {
+            if (args[i] == "-m") {
+                message = args[i + 1];
+                break;
+            }
+        }
+        return mygit::commands::run_commit(message);
+    }
+
+    if (command == "push") {
+        bool force_ai = false;
+        std::vector<std::string> positional;
+        for (size_t i = 1; i < args.size(); ++i) {
+            if (args[i] == "--force-ai") force_ai = true;
+            else positional.push_back(args[i]);
+        }
+        if (positional.size() < 2) {
+            std::cerr << "\n  Error: push requires <remote> <branch>\n";
+            print_usage();
+            return 1;
+        }
+        return mygit::commands::run_push(positional[0], positional[1], force_ai);
+    }
+
+    std::cerr << "\n  Unknown command: " << command << "\n";
     print_usage();
     return 1;
 }

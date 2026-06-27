@@ -5,18 +5,27 @@
 
 #include "ai/llama_client.h"
 #include "ai/prompt_builder.h"
+#include "config/mygit_config.h"
+#include "decision_engine/decision_engine.h"
 #include "git/git_diff.h"
 #include "parsers/json_parser.h"
-#include "reports/report_generator.h"
+#include "ui/terminal_ui.h"
 
 namespace mygit::commands {
 
 int run_review() {
+    config::MygitConfig cfg;
+    try {
+        cfg = config::load_config();
+    } catch (const std::exception& e) {
+        std::cerr << "\n  " << e.what() << "\n\n";
+        return 1;
+    }
+
     const git::GitDiff diff_provider;
     const std::string diff = diff_provider.get_staged_diff();
-
     if (diff.empty()) {
-        std::cout << "No staged changes to review.\n";
+        std::cout << "\n  No staged changes to review.\n\n";
         return 0;
     }
 
@@ -24,21 +33,23 @@ int run_review() {
     const std::string prompt = prompt_builder.build_review_prompt(diff);
 
     std::string raw_response;
-    try {
-        const ai::LlamaClient llama_client;
-        raw_response = llama_client.review(prompt);
-    } catch (const std::exception& e) {
-        std::cerr << "AI review unavailable: " << e.what() << "\n";
-        return 1;
-    }
+    {
+        ui::Spinner spinner("Reviewing staged changes...");
+        try {
+            const ai::LlamaClient llama_client(cfg.model_path, cfg.gpu_layers);
+            raw_response = llama_client.review(prompt);
+        } catch (const std::exception& e) {
+            spinner.stop();
+            std::cerr << "\n  AI review failed: " << e.what() << "\n\n";
+            return 1;
+        }
+    }  // spinner stops and clears here
 
     const parsers::JsonParser parser;
-    const ReviewResult review_result = parser.parse_review(raw_response);
+    const ReviewResult result = parser.parse_review(raw_response);
+    ui::print_report(result);
 
-    const reports::ReportGenerator reporter;
-    reporter.print(review_result);
-
-    return review_result.safe ? 0 : 1;
+    return result.safe ? 0 : 1;
 }
 
 }  // namespace mygit::commands

@@ -23,14 +23,19 @@ add_library(mygit_core
     src/types.cpp
     commands/push_command.cpp
     commands/review_command.cpp
+    commands/commit_command.cpp
+    commands/setup_command.cpp
+    config/mygit_config.cpp
     git/git_diff.cpp
     git/git_status.cpp
+    git/git_runner.cpp
     ai/llama_client.cpp
     ai/prompt_builder.cpp
     parsers/json_parser.cpp
     decision_engine/decision_engine.cpp
     reports/report_generator.cpp
     database/sqlite_manager.cpp
+    ui/terminal_ui.cpp
 )
 
 target_include_directories(mygit_core PUBLIC
