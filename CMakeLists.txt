@@ -24,6 +24,7 @@ add_library(mygit_core
     commands/push_command.cpp
     commands/review_command.cpp
     commands/commit_command.cpp
+    commands/install_command.cpp
     commands/setup_command.cpp
     config/mygit_config.cpp
     git/git_diff.cpp
