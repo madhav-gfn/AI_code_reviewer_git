@@ -244,6 +244,29 @@ int run_install() {
         }
         std::cout << "  Copied " << src.filename() << " -> " << dst << "\n";
 
+        // Also copy any sibling DLL files that the executable depends on
+        // (e.g. llama.dll, ggml.dll, ggml-base.dll, ggml-cpu.dll).
+        const fs::path src_dir = src.parent_path();
+        for (const auto& entry : fs::directory_iterator(src_dir)) {
+            if (!entry.is_regular_file()) continue;
+            const auto ext = entry.path().extension().string();
+            // Case-insensitive check for .dll
+            if (ext == ".dll" || ext == ".DLL") {
+                const fs::path dll_dst = dst_dir / entry.path().filename();
+                fs::copy_file(entry.path(), dll_dst,
+                              fs::copy_options::overwrite_existing, ec);
+                if (ec) {
+                    std::cerr << "  Warning: could not copy "
+                              << entry.path().filename() << ": "
+                              << ec.message() << "\n";
+                    ec.clear();
+                } else {
+                    std::cout << "  Copied " << entry.path().filename()
+                              << " -> " << dll_dst << "\n";
+                }
+            }
+        }
+
 #ifndef _WIN32
         // Make sure the installed binary is executable.
         fs::permissions(dst, fs::perms::owner_exec | fs::perms::group_exec |

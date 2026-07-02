@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "commands/commit_command.h"
+#include "commands/install_command.h"
 #include "commands/push_command.h"
 #include "commands/review_command.h"
 #include "commands/setup_command.h"
@@ -14,6 +15,7 @@ void print_usage() {
     std::cout << "\n"
               << "  Usage:\n"
               << "    mygit setup                         -- configure model path\n"
+              << "    mygit install                       -- install to PATH\n"
               << "    mygit review                        -- review staged changes\n"
               << "    mygit commit [-m \"message\"]         -- review then commit\n"
               << "    mygit push <remote> <branch>        -- review then push\n"
@@ -37,6 +39,10 @@ int main(int argc, char** argv) {
 
     if (command == "setup") {
         return mygit::commands::run_setup();
+    }
+
+    if (command == "install") {
+        return mygit::commands::run_install();
     }
 
     if (command == "review") {
