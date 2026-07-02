@@ -17,6 +17,7 @@ find_package(fmt CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(llama CONFIG REQUIRED)
+find_package(ftxui CONFIG REQUIRED)
 
 # --- Core library --------------------------------------------------------
 add_library(mygit_core
@@ -50,6 +51,8 @@ target_link_libraries(mygit_core PUBLIC
     spdlog::spdlog
     SQLite::SQLite3
     llama
+    ftxui::dom
+    ftxui::screen
 )
 
 target_compile_options(mygit_core PRIVATE

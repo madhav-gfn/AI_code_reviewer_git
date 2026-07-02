@@ -67,7 +67,7 @@ void ensure_backend_initialized() {
 LlamaClient::LlamaClient(std::string model_path, int n_gpu_layers)
     : model_path_(resolve_model_path(std::move(model_path))),
       n_gpu_layers_(resolve_gpu_layers(n_gpu_layers)),
-      n_ctx_(4096) {
+      n_ctx_(8192) {
     ensure_backend_initialized();
 
     llama_model_params model_params = llama_model_default_params();
@@ -148,7 +148,7 @@ std::string LlamaClient::review(const std::string& prompt) const {
     }
     if (static_cast<int>(prompt_tokens.size()) >= n_ctx_) {
         throw std::runtime_error(
-            "Diff is too large for the model's context window (n_ctx=" +
+            "Diff is too large for the model's context git (n_ctx=" +
             std::to_string(n_ctx_) + "); consider chunking the diff per file.");
     }
 
