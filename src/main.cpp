@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "commands/commit_command.h"
+#include "commands/history_command.h"
 #include "commands/install_command.h"
 #include "commands/push_command.h"
 #include "commands/review_command.h"
@@ -20,6 +21,7 @@ void print_usage() {
               << "    mygit commit [-m \"message\"]         -- review then commit\n"
               << "    mygit push <remote> <branch>        -- review then push\n"
               << "    mygit push <remote> <branch> --force-ai\n"
+              << "    mygit history                       -- show last 10 reviews\n"
               << "\n";
 }
 
@@ -73,6 +75,10 @@ int main(int argc, char** argv) {
             return 1;
         }
         return mygit::commands::run_push(positional[0], positional[1], force_ai);
+    }
+
+    if (command == "history") {
+        return mygit::commands::run_history();
     }
 
     std::cerr << "\n  Unknown command: " << command << "\n";

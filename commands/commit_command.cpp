@@ -7,9 +7,11 @@
 #include "ai/llama_client.h"
 #include "ai/prompt_builder.h"
 #include "config/mygit_config.h"
+#include "database/sqlite_manager.h"
 #include "decision_engine/decision_engine.h"
 #include "git/git_diff.h"
 #include "git/git_runner.h"
+#include "git/git_status.h"
 #include "logger/review_logger.h"
 #include "parsers/json_parser.h"
 #include "ui/terminal_ui.h"
@@ -61,6 +63,13 @@ int run_commit(const std::string& message) {
     ui::print_verdict(allowed, false);
 
     logger::log_review(result, allowed, "commit", inference_ms);
+
+    // Persist to SQLite memory system.
+    database::SqliteManager db((config::get_config_dir() / "mygit.db").string());
+    if (db.is_open()) {
+        const git::GitStatus status;
+        db.save_review(result, status.get_current_branch(), !allowed);
+    }
 
     if (!allowed) return 1;
 

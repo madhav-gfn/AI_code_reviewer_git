@@ -25,6 +25,7 @@ add_library(mygit_core
     commands/push_command.cpp
     commands/review_command.cpp
     commands/commit_command.cpp
+    commands/history_command.cpp
     commands/install_command.cpp
     commands/setup_command.cpp
     config/mygit_config.cpp
@@ -50,7 +51,7 @@ target_link_libraries(mygit_core PUBLIC
     nlohmann_json::nlohmann_json
     fmt::fmt
     spdlog::spdlog
-    SQLite::SQLite3
+    SQLite3::SQLite3
     llama
     ftxui::dom
     ftxui::screen

@@ -7,6 +7,7 @@
 #include "ai/llama_client.h"
 #include "ai/prompt_builder.h"
 #include "config/mygit_config.h"
+#include "database/sqlite_manager.h"
 #include "decision_engine/decision_engine.h"
 #include "git/git_diff.h"
 #include "git/git_runner.h"
@@ -61,6 +62,12 @@ int run_push(const std::string& remote, const std::string& branch, bool force_ai
     ui::print_verdict(allowed, force_ai && !result.safe);
 
     logger::log_review(result, allowed, "push", inference_ms);
+
+    // Persist to SQLite memory system.
+    database::SqliteManager db((config::get_config_dir() / "mygit.db").string());
+    if (db.is_open()) {
+        db.save_review(result, branch, !allowed);
+    }
 
     if (!allowed) return 1;
     return git::run_git("push " + remote + " " + branch);

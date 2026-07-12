@@ -10,4 +10,8 @@ namespace mygit::git {
 // Returns git's exit code: 0 = success, non-zero = failure.
 int run_git(const std::string& args);
 
+// Runs `git <args>` and captures stdout into a string (trimmed).
+// Returns empty string on failure.
+std::string run_git_capture(const std::string& args);
+
 }  // namespace mygit::git
