@@ -19,4 +19,19 @@ std::string PromptBuilder::build_review_prompt(const std::string& diff) const {
         "Diff:\n" + diff;
 }
 
+std::string PromptBuilder::build_commit_message_prompt(const std::string& diff) const {
+    return
+        "You are a commit message generator. Given the following git diff, "
+        "write a single-line commit message following the Conventional Commits format:\n\n"
+        "  <type>(<scope>): <short description>\n\n"
+        "Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore\n"
+        "Scope: the module, file, or component most affected (keep it short)\n\n"
+        "Rules:\n"
+        "- Return ONLY the commit message, nothing else\n"
+        "- No quotes, no explanation, no markdown\n"
+        "- Keep it under 72 characters\n"
+        "- Use imperative mood (\"add\" not \"added\")\n\n"
+        "Diff:\n" + diff;
+}
+
 }  // namespace mygit::ai
