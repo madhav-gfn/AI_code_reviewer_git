@@ -10,6 +10,7 @@
     "sqlite3",
     "ftxui",
     "catch2",
-    "llama-cpp"
+    "llama-cpp",
+    "libgit2"
   ]
 }
