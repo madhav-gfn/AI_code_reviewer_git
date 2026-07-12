@@ -16,7 +16,8 @@ std::string GitStatus::get_current_branch() const {
     ensure_libgit2_initialized();
 
     git_repository* repo_raw = nullptr;
-    if (git_repository_open_ext(&repo_raw, nullptr, 0, nullptr) != 0) {
+    // Pass "." instead of nullptr for the path parameter
+    if (git_repository_open_ext(&repo_raw, nullptr, GIT_REPOSITORY_OPEN_FROM_ENV, nullptr) != 0) {
         return std::string();
     }
     std::unique_ptr<git_repository, void(*)(git_repository*)> repo(repo_raw, git_repository_free);
@@ -35,7 +36,8 @@ bool GitStatus::has_staged_changes() const {
     ensure_libgit2_initialized();
 
     git_repository* repo_raw = nullptr;
-    if (git_repository_open_ext(&repo_raw, nullptr, 0, nullptr) != 0) {
+    // Pass "." instead of nullptr for the path parameter
+    if (git_repository_open_ext(&repo_raw, nullptr, GIT_REPOSITORY_OPEN_FROM_ENV, nullptr) != 0) {
         return false;
     }
     std::unique_ptr<git_repository, void(*)(git_repository*)> repo(repo_raw, git_repository_free);

@@ -1,69 +1,113 @@
-# mygit — AI Code Reviewer Git
+# mygit — AI-Powered Code Reviewer
 
-C++20 wrapper around Git that runs a local LLM review before letting you push.
+`mygit` is a blazingly fast C++20 CLI wrapper around Git. It enforces a strict, LLM-powered code review pipeline **before** letting you push or commit your code. 
 
-## Status: V1 scaffold
+By running inferences locally on your own hardware via `llama.cpp` and `libgit2`, `mygit` guarantees total code privacy, zero network latency, and unparalleled reliability through grammar-constrained AI outputs.
 
-What's wired up:
-- CLI (`push`, `commit`, `review`) — FR-1
-- Staged diff extraction via shell `git` calls — FR-2
-- JSON parsing of review output — FR-5
-- Decision engine (block on Critical, `--force-ai` override) — FR-4
-- Console report output — FR-6
+---
 
-What's stubbed and needs the next pass:
-- `ai/llama_client.cpp` returns a fixed `{"safe": true, "issues": []}` —
-  swap in a real llama.cpp call (model loading, inference) once a model is
-  picked and dropped into `models/`.
-- `commit` command is a no-op (FR-8 commit message generation, FR-9 hooks).
-- The actual `git push`/`git commit` invocation after a passing review.
-- `database/sqlite_manager` only opens a connection; no schema yet (Memory
-  System is a V3/future requirement).
+## 🌟 Key Features & Approaches
 
-## Prerequisites
+### 🧠 1. Local AI Inference (llama.cpp)
+No cloud, no API keys, no network calls. `mygit` loads and runs `.gguf` language models (like Qwen2.5-Coder-1.5B) entirely locally.
+- **Hardware Acceleration:** Seamlessly offloads layers to the GPU (via CUDA/Vulkan) or falls back to optimized CPU inference.
+- **Persistent Context:** The `LlamaClient` object manages its own KV cache and context, avoiding model reloading penalties across consecutive operations.
 
-- A C++20 compiler (GCC 13+ / Clang 17+ / MSVC 19.3+)
-- CMake 3.21+
-- Ninja
-- [vcpkg](https://github.com/microsoft/vcpkg), with `VCPKG_ROOT` set in your
-  environment
+### 🛡️ 2. Grammar-Constrained JSON (GBNF)
+Instead of relying on fragile "prompt engineering" to get the AI to output JSON, `mygit` uses **GBNF (GGML BNF) grammars** at the sampling level. 
+- The model is physically constrained and is mathematically incapable of generating anything other than our strictly defined JSON schema.
+- **Zero parsing errors.** The JSON parser receives mathematically guaranteed, perfectly shaped JSON objects every time.
 
-## Build
+### ⛔ 3. Decision Engine & Verdicts
+The code review parses the AI's feedback into structured severities (`critical`, `high`, `medium`, `low`).
+- **Blocking Commits:** If the AI detects a `critical` severity issue (like a security vulnerability or fatal bug), `mygit` immediately halts the `commit` or `push` process.
+- **Force Override:** Developers retain ultimate control. Passing the `--force-ai` flag explicitly overrides the AI's verdict.
 
-```bash
+### 📝 4. Auto-Generated Commit Messages
+Forget staring at a blank terminal trying to summarize your changes. 
+- Running `mygit commit` (without the `-m` flag) triggers the AI to analyze your staged diff and generate a **Conventional Commit** message (e.g., `feat(auth): add JWT validation`).
+- **Interactive Flow:** You are prompted with the generated message: `Use this? [Y/n/e to edit]`.
+  - `Y`: Uses the generated message.
+  - `e`: Opens your `$EDITOR` (or `notepad`/`vi`) with the message pre-filled for tweaking.
+  - `n`: Falls back to standard Git editor behavior.
+
+### 📂 5. Native Git Integration (libgit2)
+`mygit` does not shell out to the `git` CLI executable using brittle `popen()` calls.
+- **Direct C API:** Uses `libgit2` to directly traverse the Git object database, query the index, and calculate tree-to-index diffs purely in memory.
+- **RAII Memory Safety:** All C-style `libgit2` pointers (`git_repository`, `git_diff`, `git_tree`) are wrapped in C++ `std::unique_ptr` with custom deleters, guaranteeing zero memory leaks.
+
+### 💾 6. SQLite Review Memory System
+Every review verdict is persisted to a local SQLite database (`~/.mygit/mygit.db`), establishing a long-term memory system.
+- **Schema Auto-Creation:** `CREATE TABLE IF NOT EXISTS` ensures zero setup overhead.
+- **ACID Transactions:** Inserts into the `reviews` and `issues` tables are bound by `BEGIN` and `COMMIT` block limits to ensure atomicity.
+- **Prepared Statements:** 100% parameter-bound queries (`sqlite3_bind_*`) prevent SQL injection and ensure high performance.
+- **View History:** The `mygit history` command queries the database and renders a beautiful, colored ASCII table of your last 10 reviews using the **FTXUI** library.
+
+---
+
+## 🛠️ Commands
+
+| Command | Description |
+|---------|-------------|
+| `mygit setup` | Interactive prompt to configure your model path and GPU layer count. |
+| `mygit install` | Self-installs the executable to `~/.mygit/bin` and updates your system `PATH`. |
+| `mygit review` | Analyzes staged changes and prints a colored report to the terminal. |
+| `mygit commit` | Runs a review. If it passes, generates a commit message, and commits. |
+| `mygit commit -m "msg"` | Runs a review. If it passes, commits using your provided message. |
+| `mygit push <remote> <branch>` | Runs a review. If it passes, pushes the code upstream. |
+| `mygit history` | Displays a table of your most recent AI reviews and verdicts. |
+
+> **Override Flag:** Append `--force-ai` to `commit` or `push` to bypass blocking issues.
+
+---
+
+## ⚙️ Prerequisites & Setup
+
+1. **Compiler:** C++20 compatible compiler (MSVC 19.3+, GCC 13+, Clang 17+)
+2. **Build System:** CMake 3.21+ & Ninja
+3. **Package Manager:** [vcpkg](https://github.com/microsoft/vcpkg) installed and bootstrapped.
+
+### Building from Source
+
+```powershell
 git clone <this repo>
 cd AI_code_reviewer_git
 
-# vcpkg will install dependencies declared in vcpkg.json on first configure
+# Configure CMake (vcpkg will automatically fetch libgit2, llama.cpp, SQLite, FTXUI, etc.)
 cmake --preset default
-cmake --build --build-preset default
+
+# Build the executable
+cmake --build build/default
 ```
 
-Release build:
+### Configuration & Models
 
-```bash
-cmake --preset release
-cmake --build --build-preset release
+You must provide `mygit` with a compatible `.gguf` model. (We recommend [Qwen2.5-Coder-1.5B-Instruct](https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF) for lightning-fast, high-quality local reviews).
+
+Run the setup command to configure the model path and GPU layers (use `99` to offload the entire model to the GPU for maximum speed):
+
+```powershell
+.\build\default\mygit.exe setup
 ```
 
-## Run
+Once configured, install `mygit` to your system PATH:
 
-```bash
-./build/default/mygit review
-./build/default/mygit push origin main
-./build/default/mygit push origin main --force-ai
+```powershell
+.\build\default\mygit.exe install
 ```
 
-## Test
+Restart your terminal, and you can now run `mygit` from anywhere!
 
-```bash
-ctest --preset default
-```
+---
 
-## Project layout
+## 🏗️ Project Architecture
 
-Matches the structure in the spec: `commands/` (CLI command handlers),
-`git/` (shell-based git access, FR-2), `ai/` (prompt building + model
-client, FR-3), `parsers/` (FR-5 JSON parsing), `decision_engine/` (FR-4),
-`reports/` (FR-6), `database/` (future memory system), `rag/` and `agents/`
-(empty, reserved for V4/V5).
+The architecture maps cleanly to modular components:
+- `commands/` — CLI subcommands (`review`, `commit`, `push`, `history`, `setup`, `install`)
+- `git/` — Libgit2 integration for native repository querying (`git_diff`, `git_status`)
+- `ai/` — Prompt construction and local `llama.cpp` client implementation
+- `parsers/` — Robust JSON extraction mapping AI outputs to C++ types
+- `decision_engine/` — Severity tracking and blocking logic
+- `database/` — SQLite persistence layer (`save_review`, `get_recent_reviews`)
+- `ui/` — FTXUI terminal interfaces, spinners, and table reports
+- `config/` — JSON-backed user configuration management

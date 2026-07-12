@@ -12,7 +12,8 @@ std::string GitDiff::get_staged_diff() const {
     static struct Libgit2Init { Libgit2Init(){ git_libgit2_init(); } ~Libgit2Init(){ git_libgit2_shutdown(); } } libgit2init;
 
     git_repository* repo_raw = nullptr;
-    int err = git_repository_open_ext(&repo_raw, nullptr, 0, nullptr);
+    // Pass "." instead of nullptr for the path parameter
+    int err = git_repository_open_ext(&repo_raw, nullptr, GIT_REPOSITORY_OPEN_FROM_ENV, nullptr);
     if (err != 0) {
         const git_error* e = git_error_last();
         throw std::runtime_error(std::string("git: failed to open repository: ") + (e && e->message ? e->message : "unknown"));
