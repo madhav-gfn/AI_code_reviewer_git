@@ -28,6 +28,11 @@ public:
     // no prompt-engineering-and-hope required.
     std::string review(const std::string& prompt) const;
 
+    // Runs the model on `prompt` to generate a conventional commit message.
+    // No grammar constraints — the prompt instructs the model to return only
+    // the commit message string.
+    std::string generate_commit_message(const std::string& prompt) const;
+
 private:
     std::string model_path_;
     int n_gpu_layers_;
