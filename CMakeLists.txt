@@ -37,6 +37,7 @@ add_library(mygit_core
     decision_engine/decision_engine.cpp
     reports/report_generator.cpp
     database/sqlite_manager.cpp
+    logger/review_logger.cpp
     ui/terminal_ui.cpp
 )
 
