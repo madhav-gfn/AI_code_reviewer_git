@@ -2,6 +2,7 @@
 
 #include <exception>
 #include <iostream>
+#include <chrono>
 
 #include "ai/llama_client.h"
 #include "ai/prompt_builder.h"
@@ -9,6 +10,7 @@
 #include "decision_engine/decision_engine.h"
 #include "git/git_diff.h"
 #include "git/git_runner.h"
+#include "logger/review_logger.h"
 #include "parsers/json_parser.h"
 #include "ui/terminal_ui.h"
 
@@ -34,8 +36,10 @@ int run_commit(const std::string& message) {
     const std::string prompt = prompt_builder.build_review_prompt(diff);
 
     std::string raw_response;
+    long long inference_ms = 0;
     {
         ui::Spinner spinner("Reviewing staged changes...");
+        auto start = std::chrono::steady_clock::now();
         try {
             const ai::LlamaClient llama_client(cfg.model_path, cfg.gpu_layers);
             raw_response = llama_client.review(prompt);
@@ -44,6 +48,8 @@ int run_commit(const std::string& message) {
             std::cerr << "\n  AI review failed: " << e.what() << "\n\n";
             return 1;
         }
+        auto end = std::chrono::steady_clock::now();
+        inference_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     }
 
     const parsers::JsonParser parser;
@@ -53,6 +59,8 @@ int run_commit(const std::string& message) {
     const decision_engine::DecisionEngine engine;
     const bool allowed = engine.should_allow(result, /*force_ai=*/false);
     ui::print_verdict(allowed, false);
+
+    logger::log_review(result, allowed, "commit", inference_ms);
 
     if (!allowed) return 1;
 
