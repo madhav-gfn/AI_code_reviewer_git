@@ -108,12 +108,12 @@ sequenceDiagram
 
     User->>CLI: mygit commit
     CLI->>LibGit2: get_staged_diff()
-    LibGit2-->>CLI: "+ std::cout << 'Hello World';"
+    LibGit2-->>CLI: staged diff string
     CLI->>LlamaCPP: prompt + diff + GBNF grammar
     
     Note over LlamaCPP: Local GPU Inference
     
-    LlamaCPP-->>CLI: {"safe": true, "issues": []}
+    LlamaCPP-->>CLI: safe=true, issues=[]
     CLI->>DecisionEngine: evaluate(json)
     
     DecisionEngine->>SQLite: save_review()
@@ -121,8 +121,8 @@ sequenceDiagram
     alt is safe (no critical issues)
         DecisionEngine-->>CLI: PASS
         CLI->>LlamaCPP: generate_commit_message(diff)
-        LlamaCPP-->>CLI: "feat: add hello world logging"
-        CLI->>User: "Use this message? [Y/n/e]"
+        LlamaCPP-->>CLI: feat: add hello world logging
+        CLI->>User: Use this message? [Y/n/e]
         User-->>CLI: Y
         CLI->>LibGit2: execute git commit
         CLI-->>User: Success!
