@@ -19,6 +19,7 @@ find_package(SQLite3 REQUIRED)
 find_package(llama CONFIG REQUIRED)
 find_package(ftxui CONFIG REQUIRED)
 find_package(libgit2 CONFIG REQUIRED)
+find_package(Threads REQUIRED)
 
 
 # --- Core library --------------------------------------------------------
@@ -58,6 +59,7 @@ target_link_libraries(mygit_core PUBLIC
     ftxui::dom
     ftxui::screen
     libgit2::libgit2package
+    Threads::Threads
 )
 
 target_compile_options(mygit_core PRIVATE
