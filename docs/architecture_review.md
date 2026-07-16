@@ -36,29 +36,41 @@ The current pipeline treats a file rename or move as a file deletion followed by
 
 I will implement rename detection using libgit2 (git_diff_find_similar()) to identify file moves and renames based on content similarity before processing the diff. Pure file relocations will be classified as rename operations and excluded from content analysis. If a renamed file also contains code modifications, only the actual changes will be analyzed while preserving the rename metadata. This reduces unnecessary context, improves processing efficiency, and generates commit messages that accurately describe repository reorganizations instead of false file additions and deletions.
 ---
+### 5. all acceptance
+
+it should not accept the diffs if there are too many or too big diff or the diff is about some documentation file which is a binary non text or code or md file
 
 ## 🚀 The Roadmap: Advanced CUDA & Model Optimization
 
 If we want to push this to absolute state-of-the-art performance, we need to dive deep into pipeline optimization and model editing.
 
-### Level 1: Pipeline Acceleration (Batched & Speculative)
-- **Speculative Decoding:** Since we are using small, fast models (1.5B), we could integrate a tiny draft model (e.g., 0.5B parameters) that guesses the next tokens, while the main model verifies them in parallel. This can easily double or triple the tokens/second rate.
-- **Batched Processing:** If a user modifies 15 files, feeding a massive diff into the context window degrades the AI's reasoning. We should chunk the diff by file and use CUDA batching to run multiple inferences simultaneously, then use a final reduction prompt to aggregate the severities.
-- **Prefix Caching:** The system prompt and GBNF grammar never change. We should save the KV cache state of the system prompt to disk or VRAM. Every inference will start immediately at the first token of the diff, bypassing prompt evaluation entirely.
+### Level 1: Pipeline Acceleration
 
-### Level 2: Deep Model Customization (LoRA & Fine-Tuning)
-- **Personalized Commit Tone via LoRA:** Why use a generic system prompt for commit messages? We can build a background command (`mygit train`) that extracts your last 500 commit messages from your git history and dynamically trains a Low-Rank Adaptation (LoRA) adapter locally using CUDA. When you run `mygit commit`, it hot-swaps your custom LoRA into the model, ensuring the AI writes commits exactly in your personal tone and style.
-- **Project-Specific Adapters:** Different projects have different coding standards. `mygit` could automatically detect the repository language (C++ vs Python) and hot-load language-specific expert adapters.
+- **Prefix KV Caching:** The system prompt, review guidelines, and GBNF grammar remain constant across every inference. I will cache their KV states after the first run so subsequent requests begin directly from the Git diff, eliminating repeated prompt evaluation and reducing inference latency.
 
+- **Batched Per-File Processing:** Instead of sending a large multi-file diff to the model, I will split the staged changes into individual file-level batches. Each file will be reviewed independently in parallel using CUDA, after which a lightweight aggregation pass will combine the results into a single repository-level review with overall severity and summary. This improves both inference speed and reasoning quality by reducing context dilution.
+
+- **Incremental Processing:** Rather than analyzing the entire repository on every execution, I will process only staged files and modified code regions. Combined with Git-aware change detection, this minimizes unnecessary inference and keeps review times nearly constant regardless of repository size.
+
+- **Prefix-Aware Context Reduction:** Before inference, the pipeline will filter irrelevant context by excluding unchanged files, pure file renames, and unrelated code from the prompt. Combined with repository-aware retrieval, this keeps the context window focused on only the information required for the current review, reducing token count while improving response quality.
+
+
+### Level 2: Model Optimization & Architectural Enhancements
+
+- **Static Prompt Graph Optimization:** Since the prompt structure is deterministic (system prompt → retrieved context → Git diff), I will optimize prompt construction by separating static and dynamic components. Static prefixes will be cached while only the Git diff and retrieved context are processed at runtime, reducing prompt evaluation overhead.
+
+- **Mixed-Precision & Quantization Optimization:** I will benchmark multiple quantization formats (INT8, INT4, FP16) using ONNX Runtime to identify the optimal trade-off between inference speed and review quality. Different tasks, such as commit message generation and code review, may use different optimized model variants.
+
+- **Task-Specific Model Routing:** Instead of relying on a single model for every operation, I will introduce a lightweight routing layer that selects the most suitable local model based on the requested task. Smaller models can generate commit messages, while larger reasoning models are reserved for complex code reviews, reducing average inference latency.
+
+- **Graph-Level ONNX Optimization:** Before deployment, the model graph will be optimized using ONNX Runtime's graph optimization passes, including operator fusion, constant folding, memory reuse, and kernel selection. This minimizes runtime overhead and maximizes GPU utilization without modifying model behavior.
 ### Level 3: The "Agentic" Shift (V4 / V5)
-- **Auto-Fix Generation:** Right now `mygit` only points out errors. If we utilize the `tools` capability in modern models, we can have `mygit` actually propose the diff to fix the critical error it found.
-- **Self-Healing Commits:** If the compilation fails, `mygit` intercepts the compiler stderr (like MSVC `C1090` errors), feeds it back into the model along with the diff, and the model auto-patches the code. 
-
+- **Patch Generation & Safe Auto-Fix:** Instead of only reporting issues, `mygit` will generate Git-compatible unified patches for detected problems. The generated patch can be previewed, validated, and applied automatically upon user approval, enabling one-command fixes while preserving the standard Git workflow.
 ---
 
 ## The Verdict
 
-You have built an incredibly solid engine by tying `libgit2` and `llama.cpp` together natively. The next step is moving from a **CLI Tool** to an **AI Daemon**. 
+we have built an incredibly solid engine by tying `libgit2` and `llama.cpp` together natively. The next step is moving from a **CLI Tool** to an **AI Daemon**. 
 
 1. **Implement KV Prefix Caching** (Immediate speedup).
 2. **Move to an IPC Daemon model** (Zero cold starts).

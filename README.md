@@ -1,5 +1,8 @@
 # mygit - The Ultimate AI-Powered Code Reviewer
 
+
+Please do read architecture_review.md file to know the scope of project and the potential improvements it can have
+
 When I set out to build mygit, my primary goal was to create a local LLM code reviewer that did not compromise on speed, privacy, or reliability. I quickly hit my first major roadblock: using basic shell commands to extract git diffs proved incredibly brittle and prone to unpredictable parsing errors across different operating systems. To solve this, I completely ripped out the shell integrations and natively embedded libgit2 into the project. This allowed the tool to interface directly with the Git object database, pulling the exact index structures straight from memory without any subshell overhead.
 
 The next massive hurdle was the unreliability of LLM outputs. Asking an AI model to return JSON usually results in random markdown blocks, trailing commas, or complete hallucinations that crash the parser. To fix this, I deeply integrated llama.cpp and utilized GGML BNF (GBNF) grammars. By applying this grammar at the sampling layer, the model is mathematically forced to adhere strictly to the expected JSON schema. This completely eliminated parsing errors, allowing the decision engine to accurately and safely block commits based on severity levels.

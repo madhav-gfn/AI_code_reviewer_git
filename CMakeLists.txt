@@ -32,15 +32,18 @@ add_library(mygit_core
     commands/install_command.cpp
     commands/setup_command.cpp
     config/mygit_config.cpp
+    diff_filter/diff_filter.cpp
     git/git_diff.cpp
     git/git_status.cpp
     git/git_runner.cpp
     ai/llama_client.cpp
     ai/prompt_builder.cpp
+    ai/review_aggregator.cpp
     parsers/json_parser.cpp
     decision_engine/decision_engine.cpp
     reports/report_generator.cpp
     database/sqlite_manager.cpp
+    database/async_db_writer.cpp
     logger/review_logger.cpp
     ui/terminal_ui.cpp
 )
