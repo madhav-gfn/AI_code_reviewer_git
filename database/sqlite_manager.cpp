@@ -1,7 +1,9 @@
 #include "database/sqlite_manager.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <filesystem>
+#include <iomanip>
 #include <sstream>
 #include <stdexcept>
 
@@ -11,6 +13,65 @@
 #include "git/git_runner.h"
 
 namespace mygit::database {
+
+namespace {
+
+nlohmann::json issues_to_json(const std::vector<Issue>& issues) {
+    nlohmann::json arr = nlohmann::json::array();
+    for (const auto& issue : issues) {
+        arr.push_back({
+            {"severity", to_string(issue.severity)},
+            {"file",     issue.file},
+            {"line",     issue.line},
+            {"message",  issue.message}
+        });
+    }
+    return arr;
+}
+
+std::vector<Issue> issues_from_json(const std::string& issues_json) {
+    std::vector<Issue> issues;
+    const nlohmann::json arr = nlohmann::json::parse(issues_json, nullptr, false);
+    if (arr.is_discarded() || !arr.is_array()) {
+        return issues;
+    }
+    for (const auto& item : arr) {
+        Issue issue;
+        issue.severity = severity_from_string(item.value("severity", "low"));
+        issue.file     = item.value("file", "");
+        issue.line     = item.value("line", 0);
+        issue.message  = item.value("message", "");
+        issues.push_back(std::move(issue));
+    }
+    return issues;
+}
+
+}  // namespace
+
+// ---------------------------------------------------------------------------
+// hash_diff_content
+// ---------------------------------------------------------------------------
+
+std::string hash_diff_content(const std::string& path, const std::string& patch) {
+    // FNV-1a 64-bit over path + a NUL separator + patch text. This is a
+    // content-addressed cache key, not a security digest, so a fast
+    // dependency-free hash is preferable to pulling in a crypto library.
+    constexpr uint64_t kOffsetBasis = 14695981039346656037ULL;
+    constexpr uint64_t kPrime = 1099511628211ULL;
+
+    uint64_t h = kOffsetBasis;
+    auto mix = [&h](unsigned char c) {
+        h ^= c;
+        h *= kPrime;
+    };
+    for (unsigned char c : path) mix(c);
+    mix('\0');
+    for (unsigned char c : patch) mix(c);
+
+    std::ostringstream oss;
+    oss << std::hex << std::setw(16) << std::setfill('0') << h;
+    return oss.str();
+}
 
 // ---------------------------------------------------------------------------
 // Construction / destruction
@@ -68,6 +129,12 @@ void SqliteManager::init_schema() {
             line      INTEGER NOT NULL DEFAULT 0,
             message   TEXT    NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS file_review_cache (
+            hash        TEXT PRIMARY KEY,
+            safe        INTEGER NOT NULL,
+            issues_json TEXT    NOT NULL,
+            timestamp   TEXT    NOT NULL DEFAULT (datetime('now'))
+        );
     )";
 
     char* err_msg = nullptr;
@@ -101,16 +168,7 @@ void SqliteManager::save_review(const ReviewResult& result,
     }
 
     // -- Serialize issues to JSON -------------------------------------------
-    nlohmann::json issues_arr = nlohmann::json::array();
-    for (const auto& issue : result.issues) {
-        issues_arr.push_back({
-            {"severity", to_string(issue.severity)},
-            {"file",     issue.file},
-            {"line",     issue.line},
-            {"message",  issue.message}
-        });
-    }
-    const std::string issues_json = issues_arr.dump();
+    const std::string issues_json = issues_to_json(result.issues).dump();
 
     // -- Transaction --------------------------------------------------------
     char* err = nullptr;
@@ -216,6 +274,55 @@ std::vector<ReviewRecord> SqliteManager::get_recent_reviews(int limit) {
 
     sqlite3_finalize(stmt);
     return records;
+}
+
+// ---------------------------------------------------------------------------
+// Diff-content review cache
+// ---------------------------------------------------------------------------
+
+bool SqliteManager::get_cached_file_review(const std::string& hash, ReviewResult& out) {
+    if (!db_) return false;
+    auto* db = static_cast<sqlite3*>(db_);
+
+    const char* sql = "SELECT safe, issues_json FROM file_review_cache WHERE hash = ?;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+    sqlite3_bind_text(stmt, 1, hash.c_str(), -1, SQLITE_TRANSIENT);
+
+    bool found = false;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        out.safe = sqlite3_column_int(stmt, 0) != 0;
+        const unsigned char* text = sqlite3_column_text(stmt, 1);
+        out.issues = issues_from_json(text ? reinterpret_cast<const char*>(text) : "[]");
+        found = true;
+    }
+    sqlite3_finalize(stmt);
+    return found;
+}
+
+void SqliteManager::save_cached_file_review(const std::string& hash, const ReviewResult& result) {
+    if (!db_) return;
+    auto* db = static_cast<sqlite3*>(db_);
+
+    const std::string issues_json = issues_to_json(result.issues).dump();
+
+    const char* sql =
+        "INSERT INTO file_review_cache (hash, safe, issues_json, timestamp) "
+        "VALUES (?, ?, ?, datetime('now')) "
+        "ON CONFLICT(hash) DO UPDATE SET safe = excluded.safe, "
+        "issues_json = excluded.issues_json, timestamp = excluded.timestamp;";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return;
+    }
+    sqlite3_bind_text(stmt, 1, hash.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int (stmt, 2, result.safe ? 1 : 0);
+    sqlite3_bind_text(stmt, 3, issues_json.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
 }
 
 }  // namespace mygit::database
