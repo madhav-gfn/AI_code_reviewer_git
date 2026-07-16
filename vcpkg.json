@@ -11,6 +11,7 @@
     "ftxui",
     "catch2",
     "llama-cpp",
-    "libgit2"
+    "libgit2",
+    "cpp-httplib"
   ]
 }

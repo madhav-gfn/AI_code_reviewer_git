@@ -20,6 +20,7 @@ find_package(llama CONFIG REQUIRED)
 find_package(ftxui CONFIG REQUIRED)
 find_package(libgit2 CONFIG REQUIRED)
 find_package(Threads REQUIRED)
+find_package(httplib CONFIG REQUIRED)
 
 
 # --- Core library --------------------------------------------------------
@@ -31,6 +32,7 @@ add_library(mygit_core
     commands/history_command.cpp
     commands/install_command.cpp
     commands/setup_command.cpp
+    commands/daemon_command.cpp
     config/mygit_config.cpp
     diff_filter/diff_filter.cpp
     git/git_diff.cpp
@@ -39,6 +41,8 @@ add_library(mygit_core
     ai/llama_client.cpp
     ai/prompt_builder.cpp
     ai/review_aggregator.cpp
+    daemon/daemon_server.cpp
+    daemon/daemon_client.cpp
     parsers/json_parser.cpp
     decision_engine/decision_engine.cpp
     reports/report_generator.cpp
@@ -63,6 +67,7 @@ target_link_libraries(mygit_core PUBLIC
     ftxui::screen
     libgit2::libgit2package
     Threads::Threads
+    httplib::httplib
 )
 
 target_compile_options(mygit_core PRIVATE

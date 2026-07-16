@@ -3,14 +3,13 @@
 #include <exception>
 #include <iostream>
 #include <chrono>
-#include <memory>
 #include <utility>
 #include <vector>
 
-#include "ai/llama_client.h"
 #include "ai/prompt_builder.h"
 #include "ai/review_aggregator.h"
 #include "config/mygit_config.h"
+#include "daemon/daemon_client.h"
 #include "database/async_db_writer.h"
 #include "database/sqlite_manager.h"
 #include "decision_engine/decision_engine.h"
@@ -33,32 +32,37 @@ std::string display_path(const git::FileDiff& fd) {
     return fd.new_path.empty() ? fd.old_path : fd.new_path;
 }
 
-// Loads the model into `owner` on first use and reuses it afterward — lets
-// callers stay agnostic to whether the model was already loaded elsewhere
-// (e.g. by an earlier cache miss in the same run).
-ai::LlamaClient& get_or_create_llama(std::unique_ptr<ai::LlamaClient>& owner,
-                                      const config::MygitConfig& cfg) {
-    if (!owner) {
-        owner = std::make_unique<ai::LlamaClient>(cfg.model_path, cfg.gpu_layers);
+// Makes sure the daemon is reachable (auto-starting it on the first actual
+// cache miss) and returns it. Cheap to call afterward - the daemon is only
+// probed/spawned once per process, so a fully cached diff (all cache hits)
+// never touches the daemon at all, same guarantee the pre-daemon code gave
+// for loading the model.
+const daemon::DaemonClient& ensure_daemon(const daemon::DaemonClient& client, bool& ready) {
+    if (!ready) {
+        if (!client.ensure_running()) {
+            throw std::runtime_error("Daemon is unreachable and failed to auto-start.");
+        }
+        ready = true;
     }
-    return *owner;
+    return client;
 }
 
 // Reviews `filtered.kept_files`. Each file's diff is fingerprinted
 // (database::hash_diff_content) and looked up in `cache` first, so
 // re-reviewing a diff that's byte-for-byte unchanged since last time reuses
-// the stored result instead of re-running inference. The model is loaded
-// lazily into `llama_owner` on the first actual cache miss, so a fully cached
-// diff never pays the model-load cost at all.
+// the stored result instead of re-running inference. The daemon is only
+// contacted (and auto-started if needed) on the first actual cache miss, so
+// a fully cached diff never pays the daemon round-trip at all.
 //
 // Uses one file-per-call batch when there's more than one file (Level 1
 // batched per-file processing), a single direct call for exactly one file, or
 // the old concatenated-diff prompt once the file count exceeds
-// kMaxBatchedFiles. The batch path uses split prompts so the shared
-// system-prompt prefix is only evaluated once (Level 1 prefix KV caching)
-// instead of once per file.
-ReviewResult run_batched_review(std::unique_ptr<ai::LlamaClient>& llama_owner,
-                                 const config::MygitConfig& cfg,
+// kMaxBatchedFiles. The batch path sends split prompts so the daemon's
+// LlamaClient only evaluates the shared system-prompt prefix once and reuses
+// its KV state across the whole batch (Level 1 prefix KV caching) - and,
+// since the daemon outlives this process, across future review/commit runs
+// too.
+ReviewResult run_batched_review(const daemon::DaemonClient& daemon_client, bool& daemon_ready,
                                  const ai::PromptBuilder& prompt_builder,
                                  const diff_filter::FilteredDiff& filtered,
                                  database::SqliteManager& cache) {
@@ -76,7 +80,7 @@ ReviewResult run_batched_review(std::unique_ptr<ai::LlamaClient>& llama_owner,
 
         const std::string prompt = prompt_builder.build_single_file_review_prompt(path, fd.patch);
         ReviewResult result =
-            parser.parse_review(get_or_create_llama(llama_owner, cfg).review(prompt));
+            parser.parse_review(ensure_daemon(daemon_client, daemon_ready).review(prompt));
         cache.save_cached_file_review(hash, result);
         return result;
     }
@@ -91,13 +95,13 @@ ReviewResult run_batched_review(std::unique_ptr<ai::LlamaClient>& llama_owner,
 
         const std::string prompt = prompt_builder.build_review_prompt(filtered.patch_text);
         ReviewResult result =
-            parser.parse_review(get_or_create_llama(llama_owner, cfg).review(prompt));
+            parser.parse_review(ensure_daemon(daemon_client, daemon_ready).review(prompt));
         cache.save_cached_file_review(hash, result);
         return result;
     }
 
-    // Partition into cache hits and misses before touching the model, so a
-    // diff that's entirely unchanged since the last review never loads it.
+    // Partition into cache hits and misses before touching the daemon, so a
+    // diff that's entirely unchanged since the last review never contacts it.
     std::vector<ReviewResult> per_file;
     per_file.reserve(filtered.kept_files.size());
     std::vector<std::pair<const git::FileDiff*, std::string>> misses;
@@ -113,17 +117,13 @@ ReviewResult run_batched_review(std::unique_ptr<ai::LlamaClient>& llama_owner,
         }
     }
 
-    if (!misses.empty()) {
-        ai::LlamaClient& llama_client = get_or_create_llama(llama_owner, cfg);
-        llama_client.cache_system_prefix(
-            prompt_builder.build_single_file_review_prompt_split("", "").prefix);
-        for (const auto& [fd_ptr, hash] : misses) {
-            const ai::SplitPrompt prompt = prompt_builder.build_single_file_review_prompt_split(
-                display_path(*fd_ptr), fd_ptr->patch);
-            ReviewResult result = parser.parse_review(llama_client.review(prompt));
-            cache.save_cached_file_review(hash, result);
-            per_file.push_back(std::move(result));
-        }
+    for (const auto& [fd_ptr, hash] : misses) {
+        const ai::SplitPrompt prompt = prompt_builder.build_single_file_review_prompt_split(
+            display_path(*fd_ptr), fd_ptr->patch);
+        ReviewResult result =
+            parser.parse_review(ensure_daemon(daemon_client, daemon_ready).review(prompt));
+        cache.save_cached_file_review(hash, result);
+        per_file.push_back(std::move(result));
     }
 
     return ai::aggregate_reviews(per_file);
@@ -132,9 +132,8 @@ ReviewResult run_batched_review(std::unique_ptr<ai::LlamaClient>& llama_owner,
 }  // namespace
 
 int run_review() {
-    config::MygitConfig cfg;
     try {
-        cfg = config::load_config();
+        config::load_config();  // fail fast with a clear message if not configured
     } catch (const std::exception& e) {
         std::cerr << "\n  " << e.what() << "\n\n";
         return 1;
@@ -172,18 +171,20 @@ int run_review() {
     database::AsyncDbWriter db_writer(db_path);
 
     // Separate synchronous connection for the diff-content review cache —
-    // cache lookups must happen before deciding whether to load the model at
-    // all, so they can't go through the async writer.
+    // cache lookups must happen before deciding whether to contact the
+    // daemon at all, so they can't go through the async writer.
     database::SqliteManager review_cache(db_path);
 
     ReviewResult result;
     long long inference_ms = 0;
-    std::unique_ptr<ai::LlamaClient> llama_owner;
+    const daemon::DaemonClient daemon_client;
+    bool daemon_ready = false;
     {
         ui::Spinner spinner("Reviewing staged changes...");
         auto start = std::chrono::steady_clock::now();
         try {
-            result = run_batched_review(llama_owner, cfg, prompt_builder, filtered, review_cache);
+            result = run_batched_review(daemon_client, daemon_ready, prompt_builder, filtered,
+                                         review_cache);
         } catch (const std::exception& e) {
             spinner.stop();
             std::cerr << "\n  AI review failed: " << e.what() << "\n\n";
