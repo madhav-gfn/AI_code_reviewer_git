@@ -72,7 +72,7 @@ target_link_libraries(mygit PRIVATE mygit_core)
 option(MYGIT_BUILD_TESTS "Build unit tests" ON)
 if(MYGIT_BUILD_TESTS)
     find_package(Catch2 3 CONFIG REQUIRED)
-    add_executable(mygit_tests tests/test_decision_engine.cpp)
+    add_executable(mygit_tests tests/test_decision_engine.cpp tests/test_diff_filter.cpp)
     target_link_libraries(mygit_tests PRIVATE mygit_core Catch2::Catch2WithMain)
 
     enable_testing()
