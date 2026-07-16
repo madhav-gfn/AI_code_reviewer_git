@@ -2,7 +2,9 @@
 
 namespace mygit::ai {
 
-std::string PromptBuilder::build_review_prompt(const std::string& diff) const {
+namespace {
+
+std::string review_instructions() {
     // TODO: tune this prompt once real model output (FR-3/FR-5) can be
     // observed. Kept minimal and explicit about the required JSON schema.
     return
@@ -15,11 +17,10 @@ std::string PromptBuilder::build_review_prompt(const std::string& diff) const {
         "    {\"severity\": \"critical|high|medium|low\", \"file\": string, "
         "\"line\": number, \"message\": string}\n"
         "  ]\n"
-        "}\n\n"
-        "Diff:\n" + diff;
+        "}\n\n";
 }
 
-std::string PromptBuilder::build_commit_message_prompt(const std::string& diff) const {
+std::string commit_message_instructions() {
     return
         "You are a commit message generator. Given the following git diff, "
         "write a single-line commit message following the Conventional Commits format:\n\n"
@@ -30,8 +31,35 @@ std::string PromptBuilder::build_commit_message_prompt(const std::string& diff) 
         "- Return ONLY the commit message, nothing else\n"
         "- No quotes, no explanation, no markdown\n"
         "- Keep it under 72 characters\n"
-        "- Use imperative mood (\"add\" not \"added\")\n\n"
-        "Diff:\n" + diff;
+        "- Use imperative mood (\"add\" not \"added\")\n\n";
+}
+
+}  // namespace
+
+std::string PromptBuilder::build_review_prompt(const std::string& diff) const {
+    return review_instructions() + "Diff:\n" + diff;
+}
+
+std::string PromptBuilder::build_commit_message_prompt(const std::string& diff) const {
+    return commit_message_instructions() + "Diff:\n" + diff;
+}
+
+std::string PromptBuilder::build_single_file_review_prompt(const std::string& file_path,
+                                                             const std::string& file_diff) const {
+    return review_instructions() + "File: " + file_path + "\nDiff:\n" + file_diff;
+}
+
+SplitPrompt PromptBuilder::build_review_prompt_split(const std::string& diff) const {
+    return SplitPrompt{review_instructions() + "Diff:\n", diff};
+}
+
+SplitPrompt PromptBuilder::build_commit_message_prompt_split(const std::string& diff) const {
+    return SplitPrompt{commit_message_instructions() + "Diff:\n", diff};
+}
+
+SplitPrompt PromptBuilder::build_single_file_review_prompt_split(
+    const std::string& file_path, const std::string& file_diff) const {
+    return SplitPrompt{review_instructions(), "File: " + file_path + "\nDiff:\n" + file_diff};
 }
 
 }  // namespace mygit::ai
