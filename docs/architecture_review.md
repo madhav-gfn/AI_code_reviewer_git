@@ -6,6 +6,45 @@ I want this to be a true "kickass" engineering marvel, here is exactly what need
 
 ---
 
+### Update:
+
+The five bottlenecks — all five addressed:
+
+# : 1
+Item: Cold start penalty
+Status: ✅ Done, both proposed fixes: the HTTP daemon (mygit daemon start/stop/status, auto-spawned on
+first cache miss, wired into commit_command.cpp) and the content-addressed review cache
+(hash_diff_content in SQLite — unchanged file diffs never re-run inference)
+────────────────────────────────────────
+# : 2
+Item: Synchronous DB writes
+Status: ✅ Done — database/async_db_writer.cpp, background writer thread
+────────────────────────────────────────
+# : 3
+Item: Zero RAG
+Status: ✅ Built exactly as specced: Tree-sitter chunking into code units, ONNX embedder (Qodo-Embed
+tested), FAISS index, incremental re-indexing by content hash. Caveat: it's dormant until you drop the
+ model files in — available() is false out of the box
+────────────────────────────────────────
+# : 4
+Item: Rename handling
+Status: ✅ Done — git_diff_find_similar detection, pure renames skipped, renamed-with-edits keeps only
+the edits
+────────────────────────────────────────
+# : 5
+Item: Diff acceptance limits
+Status: 🟡 Mostly — binary files, oversized files (20KB), oversized totals (50KB), too many files (30)
+all rejected. The doc also mentions skipping documentation/md files, which the filter doesn't
+specifically do
+
+Level 1 (pipeline acceleration) — done. Prefix KV caching (SplitPrompt, cached across CLI invocations via the daemon), per-file batched reviews with the aggregation pass, incremental/staged-only processing, and context reduction via the filter. One gap: the doc says per-file batches run "in parallel using CUDA" — they're reviewed sequentially through one model context, just with the shared prefix cached.
+
+Level 2 (model optimization) — not done. No quantization benchmarking, no task-specific model routing, no ONNX graph-optimization passes. The "static prompt" idea is partially covered by prefix caching, but the rest is still roadmap.
+
+Level 3 (agentic patch generation) — not done. The agents/ directory is an empty .gitkeep.
+
+The closing verdict listed three priorities — KV prefix caching, IPC daemon, local semantic search — and all three shipped. So the honest summary: every bottleneck and all of Level 1 is implemented; Levels 2 and 3 are the remaining frontier.
+
 ## The Ugly: Bottlenecks
 
 ### 1. The Cold Start Penalty
