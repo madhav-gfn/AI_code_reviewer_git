@@ -12,6 +12,20 @@
     "catch2",
     "llama-cpp",
     "libgit2",
-    "cpp-httplib"
-  ]
+    "cpp-httplib",
+    "onnxruntime",
+    "faiss",
+    "tree-sitter"
+  ],
+  "features": {
+    "onnx-cuda": {
+      "description": "Build onnxruntime with its CUDA execution provider. Requires the NVIDIA CUDA Toolkit AND cuDNN already installed on the system - vcpkg detects both but cannot download either (cuDNN is gated behind a manual, authenticated NVIDIA download). Pair with -DMYGIT_ENABLE_ONNX_CUDA=ON so rag/embedder.cpp actually requests the CUDA provider at runtime.",
+      "dependencies": [
+        {
+          "name": "onnxruntime",
+          "features": ["cuda"]
+        }
+      ]
+    }
+  }
 }

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>hero</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { overflow:hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    width: 1200px; height: 630px;
+    background: #ffffff;
+    color: #0a0a0a;
+    position: relative;
+    overflow: hidden;
+  }
+  /* faint grid lines, very subtle */
+  .grid {
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(0,0,0,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,0.035) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent 88%);
+  }
+  .wrap { position:relative; padding: 72px 80px; height:100%; display:flex; flex-direction:column; justify-content:space-between; }
+
+  .kicker {
+    display:inline-flex; align-items:center; gap:10px;
+    font-size: 15px; letter-spacing:0.14em; text-transform:uppercase;
+    color:#111; font-weight:700;
+  }
+  .kicker .dot { width:8px; height:8px; border-radius:50%; background:#0a0a0a; }
+
+  h1 {
+    font-size: 74px; line-height:1.02; letter-spacing:-0.02em; font-weight:800;
+    max-width: 15ch; color:#0a0a0a;
+  }
+  h1 .accent { position:relative; white-space:nowrap; }
+  h1 .accent::after {
+    content:""; position:absolute; left:-2px; right:-2px; bottom:6px; height:14px;
+    background:#0a0a0a; z-index:-1; opacity:0.10;
+  }
+  .sub { margin-top: 22px; font-size: 23px; color:#444; max-width: 42ch; line-height:1.4; }
+
+  .footer { display:flex; align-items:center; gap:28px; }
+  .badge {
+    font-family: "Cascadia Code", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 30px; font-weight:700; color:#0a0a0a;
+    border:1.5px solid #0a0a0a;
+    padding: 10px 20px; border-radius: 12px;
+    letter-spacing: 0.02em;
+  }
+  .stat { display:flex; flex-direction:column; }
+  .stat .num { font-size: 30px; font-weight:800; color:#0a0a0a; letter-spacing:-0.01em; }
+  .stat .lbl { font-size: 14px; color:#666; letter-spacing:0.02em; }
+  .divider { width:1px; height:44px; background: rgba(0,0,0,0.14); }
+</style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="wrap">
+    <div class="kicker"><span class="dot"></span> The C++26 Comeback</div>
+
+    <div>
+      <h1>Why C++ Will Be <span class="accent">Relevant AGAIN</span></h1>
+      <p class="sub">Finalized March 2026, the biggest revision in fifteen years just answered every reason teams walked away.</p>
+    </div>
+
+    <div class="footer">
+      <div class="badge">C++26</div>
+      <div class="divider"></div>
+      <div class="stat"><span class="num">30% ↓</span><span class="lbl">segfaults, on recompile</span></div>
+      <div class="divider"></div>
+      <div class="stat"><span class="num">1,000+</span><span class="lbl">bugs fixed, no rewrite</span></div>
+      <div class="divider"></div>
+      <div class="stat"><span class="num">0.30%</span><span class="lbl">performance cost</span></div>
+    </div>
+  </div>
+</body>
+</html>

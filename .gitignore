@@ -19,3 +19,5 @@ CMakeUserPresets.json
 # OS
 .DS_Store
 Thumbs.db
+venv/
+model_customization/
