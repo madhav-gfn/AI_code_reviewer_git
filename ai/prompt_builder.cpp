@@ -41,7 +41,17 @@ std::string PromptBuilder::build_review_prompt(const std::string& diff) const {
 }
 
 std::string PromptBuilder::build_commit_message_prompt(const std::string& diff) const {
-    return commit_message_instructions() + "Diff:\n" + diff;
+    return build_commit_message_prompt(diff, "");
+}
+
+std::string PromptBuilder::build_commit_message_prompt(const std::string& diff,
+                                                         const std::string& context) const {
+    if (context.empty()) {
+        return commit_message_instructions() + "Diff:\n" + diff;
+    }
+    return commit_message_instructions() +
+           "Repository context (for reference; do not describe it as changed):\n" + context +
+           "\n\nDiff:\n" + diff;
 }
 
 std::string PromptBuilder::build_single_file_review_prompt(const std::string& file_path,
@@ -55,6 +65,18 @@ SplitPrompt PromptBuilder::build_review_prompt_split(const std::string& diff) co
 
 SplitPrompt PromptBuilder::build_commit_message_prompt_split(const std::string& diff) const {
     return SplitPrompt{commit_message_instructions() + "Diff:\n", diff};
+}
+
+SplitPrompt PromptBuilder::build_commit_message_prompt_split(const std::string& diff,
+                                                               const std::string& context) const {
+    if (context.empty()) {
+        return build_commit_message_prompt_split(diff);
+    }
+    // Prefix stays exactly the constant instruction block (cacheable);
+    // context + diff both live in the suffix since both vary per call.
+    return SplitPrompt{commit_message_instructions(),
+                        "Repository context (for reference; do not describe it as changed):\n" +
+                            context + "\n\nDiff:\n" + diff};
 }
 
 SplitPrompt PromptBuilder::build_single_file_review_prompt_split(

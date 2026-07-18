@@ -19,3 +19,12 @@ CMakeUserPresets.json
 # OS
 .DS_Store
 Thumbs.db
+venv/
+model_customization/
+*.weight
+*.bias
+onnx__MatMul*
+*.onnx
+_layers.0_self_attn_rotary_emb_Constant_attr__value
+_layers.0_self_attn_rotary_emb_Constant_5_attr__value
+tokenizer.json

@@ -3,6 +3,11 @@
 ###############################################################################
 * text=auto
 
+# Patch files must keep LF endings so `git apply` (used by vcpkg to apply
+# vcpkg-overlays/onnxruntime/*.patch) matches upstream's LF-only sources
+# regardless of the checking-out machine's core.autocrlf setting.
+*.patch text eol=lf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

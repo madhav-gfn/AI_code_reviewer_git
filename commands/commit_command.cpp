@@ -1,10 +1,13 @@
 #include "commands/commit_command.h"
 
+#include <atomic>
 #include <cstdlib>
 #include <exception>
 #include <fstream>
 #include <iostream>
 #include <chrono>
+#include <mutex>
+#include <thread>
 #include <utility>
 
 #include "ai/prompt_builder.h"
@@ -20,6 +23,7 @@
 #include "git/git_status.h"
 #include "logger/review_logger.h"
 #include "parsers/json_parser.h"
+#include "rag/rag_orchestrator.h"
 #include "ui/terminal_ui.h"
 
 #include <filesystem>
@@ -121,13 +125,56 @@ ReviewResult run_batched_review(const daemon::DaemonClient& daemon_client, bool&
         }
     }
 
-    for (const auto& [fd_ptr, hash] : misses) {
-        const ai::SplitPrompt prompt = prompt_builder.build_single_file_review_prompt_split(
-            display_path(*fd_ptr), fd_ptr->patch);
-        ReviewResult result =
-            parser.parse_review(ensure_daemon(daemon_client, daemon_ready).review(prompt));
-        cache.save_cached_file_review(hash, result);
-        per_file.push_back(std::move(result));
+    if (!misses.empty()) {
+        // Start (or confirm) the daemon once, synchronously, before fanning
+        // out - ensure_daemon() mutates daemon_ready and isn't safe to call
+        // from multiple threads concurrently.
+        ensure_daemon(daemon_client, daemon_ready);
+
+        // Dispatch the misses across a small worker pool instead of one
+        // review-then-wait-then-review round trip at a time. DaemonClient
+        // opens its own connection per call, so this is safe to do
+        // concurrently; the daemon itself still serializes actual model
+        // inference behind a mutex (LlamaClient holds a single context), so
+        // the win here is overlapping request/response and JSON-parsing
+        // overhead across files rather than overlapping inference itself.
+        std::vector<ReviewResult> miss_results(misses.size());
+        std::exception_ptr first_error;
+        std::mutex error_mutex;
+
+        const unsigned hw = std::thread::hardware_concurrency();
+        const size_t worker_count = std::max<size_t>(1, std::min<size_t>(misses.size(), hw ? hw : 4));
+
+        std::atomic<size_t> next_index{0};
+        std::vector<std::thread> workers;
+        workers.reserve(worker_count);
+        for (size_t w = 0; w < worker_count; ++w) {
+            workers.emplace_back([&]() {
+                for (size_t i = next_index.fetch_add(1); i < misses.size();
+                     i = next_index.fetch_add(1)) {
+                    try {
+                        const ai::SplitPrompt prompt = prompt_builder.build_single_file_review_prompt_split(
+                            display_path(*misses[i].first), misses[i].first->patch);
+                        miss_results[i] = parser.parse_review(daemon_client.review(prompt));
+                    } catch (...) {
+                        std::lock_guard<std::mutex> lock(error_mutex);
+                        if (!first_error) first_error = std::current_exception();
+                    }
+                }
+            });
+        }
+        for (std::thread& t : workers) t.join();
+
+        if (first_error) std::rethrow_exception(first_error);
+
+        // Cache writes happen sequentially back on this thread rather than
+        // from the workers above - SqliteManager wraps a single sqlite3*
+        // connection and there's no need to fight over it when the writes
+        // are this cheap.
+        for (size_t i = 0; i < misses.size(); ++i) {
+            cache.save_cached_file_review(misses[i].second, miss_results[i]);
+            per_file.push_back(std::move(miss_results[i]));
+        }
     }
 
     return ai::aggregate_reviews(per_file);
@@ -238,6 +285,30 @@ int run_commit(const std::string& message) {
     // daemon at all, so they can't go through the async writer.
     database::SqliteManager review_cache(db_path);
 
+    // RAG pipeline (bottleneck #3 — repository-aware context retrieval).
+    // Construction never throws; if the embedding model/tokenizer aren't
+    // set up, rag_orchestrator.available() is false and everything below
+    // becomes a no-op, leaving today's diff-only prompt behavior intact.
+    // update_index() is I/O- and embedding-bound and wholly independent of
+    // the AI review below (which only talks to the daemon), so it runs on
+    // its own thread and overlaps with the review's spinner instead of
+    // adding to the CLI's total wall-clock time.
+    rag::RagOrchestrator rag_orchestrator(
+        db_path, (config::get_config_dir() / "rag.index").string());
+    std::thread rag_index_thread;
+    if (rag_orchestrator.available()) {
+        rag_index_thread = std::thread([&rag_orchestrator]() { rag_orchestrator.update_index(); });
+    }
+    // run_commit() has several early `return`s below (review failure,
+    // blocked review, -m supplied) that all happen before the explicit join
+    // near commit-message generation - std::thread's destructor calls
+    // std::terminate() on a still-joinable thread, so this guard makes sure
+    // every exit path joins it exactly once, however the function returns.
+    struct ThreadJoinGuard {
+        std::thread& t;
+        ~ThreadJoinGuard() { if (t.joinable()) t.join(); }
+    } rag_index_join_guard{rag_index_thread};
+
     ReviewResult result;
     long long inference_ms = 0;
     const daemon::DaemonClient daemon_client;
@@ -278,6 +349,12 @@ int run_commit(const std::string& message) {
         return git::run_git("commit -m \"" + message + "\"");
     }
 
+    // Make sure any in-flight index update has finished before asking it for
+    // context - it was kicked off in parallel with the review above, so
+    // this join is typically a no-op by the time we get here.
+    if (rag_index_thread.joinable()) rag_index_thread.join();
+    const std::string rag_context = rag_orchestrator.get_context_for_diff(diff);
+
     // No -m flag: generate a commit message from the diff. Reuses the daemon
     // connection warmed up during review on a cache miss; auto-starts it
     // here if review was entirely served from cache and never touched it.
@@ -285,7 +362,8 @@ int run_commit(const std::string& message) {
     {
         ui::Spinner spinner("Generating commit message...");
         try {
-            const std::string commit_prompt = prompt_builder.build_commit_message_prompt(diff);
+            const std::string commit_prompt =
+                prompt_builder.build_commit_message_prompt(diff, rag_context);
             generated_message =
                 ensure_daemon(daemon_client, daemon_ready).generate_commit_message(commit_prompt);
         } catch (const std::exception& e) {

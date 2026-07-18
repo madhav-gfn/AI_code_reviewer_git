@@ -1,0 +1,17 @@
+diff --git a/cmake/onnxruntime_providers_cuda.cmake b/cmake/onnxruntime_providers_cuda.cmake
+index 0000000..0000000 100644
+--- a/cmake/onnxruntime_providers_cuda.cmake
++++ b/cmake/onnxruntime_providers_cuda.cmake
+@@ -183,8 +183,10 @@
+
+     # Since CUDA 12.8, compiling diagnostics become stricter
+     if (CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 12.8)
+-      target_compile_options(${target} PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:--relocatable-device-code=true>")
+-      set_target_properties(${target} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
++      # Relocatable device code linking causes cross-TU template instantiation
++      # symbols (e.g. ConcatSameConcatDimImpl) to go unresolved at link time
++      # under this CUDA 13.3 / MSVC combination - contrib_ops (the only code
++      # that actually needed cross-TU device linking) is already disabled.
+       if (MSVC)
+         target_compile_options(${target} PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:SHELL:-Xcompiler /wd4505>")
+       endif()
