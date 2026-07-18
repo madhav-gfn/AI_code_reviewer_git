@@ -9,6 +9,15 @@ The next massive hurdle was the unreliability of LLM outputs. Asking an AI model
 
 mygit is a blazingly fast, C++20-native CLI wrapper around Git. It enforces a strict, local LLM-powered code review pipeline before letting you push or commit your code. By running inferences entirely on your own hardware via llama.cpp and libgit2, mygit guarantees total code privacy, zero network latency, and unparalleled reliability through grammar-constrained AI outputs.
 
+## How Codex & GPT-5.6 Were Used
+
+This project was built with OpenAI Codex (powered by GPT-5.6) as the primary development partner, using a spec-first workflow:
+
+- **Spec-first feature development.** Every major module began as a written prompt spec handed to Codex. The actual working prompt library is checked into this repo at [docs/prompts.md](docs/prompts.md) — the specs that drove the `mygit install` command, the FTXUI terminal UI, spdlog review logging, the SQLite memory system, commit message generation, and the libgit2 migration are all there verbatim. Each spec pins down the exact public API, file layout, and constraints before any code is generated, so Codex output lands in a shape the rest of the codebase already expects.
+- **Module scaffolding and iteration.** Codex generated first implementations of the subsystems (diff filtering, the RAG pipeline, the daemon, async DB writer), which were then reviewed, tightened, and integrated by hand. The architecture and its constraints (Pimpl header hygiene, RAII wrappers over C handles, graceful-fallback rules) live in [docs/architecture_review.md](docs/architecture_review.md) and were enforced across generated code.
+- **Toolchain debugging.** GPT-5.6 was used heavily to diagnose the ONNX Runtime + CUDA 13 + preview-MSVC build failures. The surviving fixes (pinned CUDA architectures, `/Zc:preprocessor`, the `extern template` linker patch, disabled contrib ops) are documented in [vcpkg-overlays/onnxruntime/](vcpkg-overlays/onnxruntime/).
+- **The dogfooding loop.** AI-written code did not get a free pass: every commit produced with Codex was reviewed by mygit itself before it was allowed into the repo. AI wrote the code, and an AI gatekeeper judged it.
+
 ## Key Features & Innovations
 
 ### Local AI Inference (llama.cpp)
