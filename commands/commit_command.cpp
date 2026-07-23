@@ -294,7 +294,10 @@ int run_commit(const std::string& message) {
     // its own thread and overlaps with the review's spinner instead of
     // adding to the CLI's total wall-clock time.
     rag::RagOrchestrator rag_orchestrator(
-        db_path, (config::get_config_dir() / "rag.index").string());
+        db_path, 
+        (config::get_config_dir() / "rag.index").string(),
+        (config::get_config_dir() / "models" / "embedding_model.onnx").string(),
+        (config::get_config_dir() / "models" / "tokenizer.json").string());
     std::thread rag_index_thread;
     if (rag_orchestrator.available()) {
         rag_index_thread = std::thread([&rag_orchestrator]() { rag_orchestrator.update_index(); });

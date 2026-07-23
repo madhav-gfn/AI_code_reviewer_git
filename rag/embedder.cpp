@@ -22,7 +22,7 @@ struct Embedder::Impl {
     std::string model_path;
     std::string tokenizer_path;
 
-    Ort::Env env{ORT_LOGGING_LEVEL_WARNING, "mygit-rag"};
+    Ort::Env env{ORT_LOGGING_LEVEL_ERROR, "mygit-rag"};
     std::unique_ptr<Ort::Session> session;
     std::unique_ptr<BpeTokenizer> tokenizer;
 

@@ -152,7 +152,11 @@ std::unique_ptr<BpeTokenizer> BpeTokenizer::load(const std::string& tokenizer_js
     }
     if (tok->vocab_.empty()) return nullptr;
 
-    tok->unk_token_ = model.value("unk_token", "");
+    if (model.contains("unk_token") && model["unk_token"].is_string()) {
+        tok->unk_token_ = model["unk_token"].get<std::string>();
+    } else {
+        tok->unk_token_ = "";
+    }
 
     if (model.contains("merges") && model["merges"].is_array()) {
         int32_t rank = 0;
