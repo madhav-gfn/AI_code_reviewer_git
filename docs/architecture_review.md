@@ -25,6 +25,10 @@ The AI is currently operating in a vacuum. It only sees the raw diff (the `+` an
 
 I will implement a lightweight RAG pipeline to generate repository-aware commit messages. The repository will be parsed using Tree-sitter and chunked into logical code units (functions, methods, classes, and structs) instead of entire files to improve retrieval accuracy. Each code unit will be embedded locally using Qodo Embed 1.5B with ONNX GPU Runtime and indexed in FAISS.
 
+To support repositories in any language (Python, JS/TS, Go, Rust, Java, HTML, Markdown, etc.), the RAG pipeline will expand beyond `tree-sitter-cpp`:
+- **Multi-Language Tree-sitter Grammars**: Integrate additional Tree-sitter language grammars (`tree-sitter-python`, `tree-sitter-javascript`, `tree-sitter-go`, `tree-sitter-rust`) into `CMakeLists.txt` for AST-level symbol extraction.
+- **Universal Text-Chunking Fallback**: For unrecognized file types or non-code files, implement a sliding-window text chunker (30-50 lines per chunk) in `rag/code_parser.cpp` so every repository gets embedded regardless of programming language.
+
 To optimize indexing, I will implement incremental indexing, re-parsing and re-embedding only modified code units after each commit instead of rebuilding the entire vector index. During commit message generation, I will embed the Git diff, retrieve the top-k semantically relevant code units from FAISS, and include this repository context alongside the diff in the LLM prompt, enabling more accurate and context-aware commit messages while keeping the system fully local and efficient.
 
 

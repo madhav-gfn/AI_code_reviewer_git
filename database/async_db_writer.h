@@ -22,13 +22,14 @@ public:
     AsyncDbWriter& operator=(const AsyncDbWriter&) = delete;
 
     // Non-blocking. Enqueues the review for background persistence.
-    void save_review_async(ReviewResult result, std::string branch, bool blocked);
+    void save_review_async(ReviewResult result, std::string branch, bool blocked, std::string repo_name = "");
 
 private:
     struct WorkItem {
         ReviewResult result;
         std::string branch;
         bool blocked;
+        std::string repo_name;
     };
 
     void worker_loop();

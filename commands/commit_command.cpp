@@ -285,6 +285,20 @@ int run_commit(const std::string& message) {
     // daemon at all, so they can't go through the async writer.
     database::SqliteManager review_cache(db_path);
 
+    // Derive git directory for repository-local RAG database and index isolation.
+    const std::string git_dir_raw = git::run_git_capture("rev-parse --git-dir");
+    std::filesystem::path rag_dir;
+    if (!git_dir_raw.empty()) {
+        rag_dir = std::filesystem::absolute(git_dir_raw) / "mygit";
+    } else {
+        rag_dir = config::get_config_dir();
+    }
+    const std::string rag_db_path = (rag_dir / "rag.db").string();
+    const std::string rag_index_path = (rag_dir / "rag.index").string();
+
+    const std::string top_level_raw = git::run_git_capture("rev-parse --show-toplevel");
+    const std::string repo_name = top_level_raw.empty() ? "" : std::filesystem::path(top_level_raw).filename().string();
+
     // RAG pipeline (bottleneck #3 — repository-aware context retrieval).
     // Construction never throws; if the embedding model/tokenizer aren't
     // set up, rag_orchestrator.available() is false and everything below
@@ -294,8 +308,8 @@ int run_commit(const std::string& message) {
     // its own thread and overlaps with the review's spinner instead of
     // adding to the CLI's total wall-clock time.
     rag::RagOrchestrator rag_orchestrator(
-        db_path, 
-        (config::get_config_dir() / "rag.index").string(),
+        rag_db_path, 
+        rag_index_path,
         (config::get_config_dir() / "models" / "embedding_model.onnx").string(),
         (config::get_config_dir() / "models" / "tokenizer.json").string());
     std::thread rag_index_thread;
@@ -341,7 +355,7 @@ int run_commit(const std::string& message) {
 
     // Persist to SQLite memory system without blocking the CLI's exit.
     const git::GitStatus status;
-    db_writer.save_review_async(result, status.get_current_branch(), !allowed);
+    db_writer.save_review_async(result, status.get_current_branch(), !allowed, repo_name);
 
     if (!allowed) return 1;
 

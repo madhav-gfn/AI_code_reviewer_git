@@ -115,6 +115,7 @@ void SqliteManager::init_schema() {
         CREATE TABLE IF NOT EXISTS reviews (
             id            INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp     TEXT    NOT NULL DEFAULT (datetime('now')),
+            repo_name     TEXT    NOT NULL DEFAULT '',
             branch        TEXT    NOT NULL,
             commit_hash   TEXT    NOT NULL DEFAULT '',
             files_changed INTEGER NOT NULL DEFAULT 0,
@@ -142,6 +143,9 @@ void SqliteManager::init_schema() {
     if (err_msg) {
         sqlite3_free(err_msg);
     }
+
+    // Migration: add repo_name column if opening an existing table created before this schema update.
+    sqlite3_exec(static_cast<sqlite3*>(db_), "ALTER TABLE reviews ADD COLUMN repo_name TEXT NOT NULL DEFAULT '';", nullptr, nullptr, nullptr);
 }
 
 // ---------------------------------------------------------------------------
@@ -150,9 +154,19 @@ void SqliteManager::init_schema() {
 
 void SqliteManager::save_review(const ReviewResult& result,
                                  const std::string& branch,
-                                 bool blocked) {
+                                 bool blocked,
+                                 const std::string& repo_name) {
     if (!db_) return;
     auto* db = static_cast<sqlite3*>(db_);
+
+    // Derive repo_name if not explicitly passed.
+    std::string actual_repo_name = repo_name;
+    if (actual_repo_name.empty()) {
+        const std::string top_level = git::run_git_capture("rev-parse --show-toplevel");
+        if (!top_level.empty()) {
+            actual_repo_name = std::filesystem::path(top_level).filename().string();
+        }
+    }
 
     // -- Gather git metadata ------------------------------------------------
     const std::string commit_hash = git::run_git_capture("rev-parse HEAD");
@@ -177,8 +191,8 @@ void SqliteManager::save_review(const ReviewResult& result,
 
     // -- INSERT into reviews ------------------------------------------------
     const char* insert_review_sql =
-        "INSERT INTO reviews (branch, commit_hash, files_changed, issues_json, blocked) "
-        "VALUES (?, ?, ?, ?, ?);";
+        "INSERT INTO reviews (branch, commit_hash, files_changed, issues_json, blocked, repo_name) "
+        "VALUES (?, ?, ?, ?, ?, ?);";
 
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(db, insert_review_sql, -1, &stmt, nullptr) != SQLITE_OK) {
@@ -186,11 +200,12 @@ void SqliteManager::save_review(const ReviewResult& result,
         return;
     }
 
-    sqlite3_bind_text(stmt, 1, branch.c_str(),       -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 2, commit_hash.c_str(),   -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 1, branch.c_str(),           -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, commit_hash.c_str(),       -1, SQLITE_TRANSIENT);
     sqlite3_bind_int (stmt, 3, files_changed);
-    sqlite3_bind_text(stmt, 4, issues_json.c_str(),   -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 4, issues_json.c_str(),       -1, SQLITE_TRANSIENT);
     sqlite3_bind_int (stmt, 5, blocked ? 1 : 0);
+    sqlite3_bind_text(stmt, 6, actual_repo_name.c_str(), -1, SQLITE_TRANSIENT);
 
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         sqlite3_finalize(stmt);
@@ -248,7 +263,8 @@ std::vector<ReviewRecord> SqliteManager::get_recent_reviews(int limit) {
     const char* sql =
         "SELECT r.id, r.timestamp, r.branch, r.commit_hash, r.files_changed, "
         "       r.blocked, "
-        "       (SELECT COUNT(*) FROM issues i WHERE i.review_id = r.id) AS issues_count "
+        "       (SELECT COUNT(*) FROM issues i WHERE i.review_id = r.id) AS issues_count, "
+        "       r.repo_name "
         "FROM reviews r "
         "ORDER BY r.timestamp DESC "
         "LIMIT ?;";
@@ -269,6 +285,8 @@ std::vector<ReviewRecord> SqliteManager::get_recent_reviews(int limit) {
         rec.files_changed = sqlite3_column_int(stmt, 4);
         rec.blocked       = sqlite3_column_int(stmt, 5) != 0;
         rec.issues_count  = sqlite3_column_int(stmt, 6);
+        const unsigned char* repo_txt = sqlite3_column_text(stmt, 7);
+        rec.repo_name     = repo_txt ? reinterpret_cast<const char*>(repo_txt) : "";
         records.push_back(std::move(rec));
     }
 

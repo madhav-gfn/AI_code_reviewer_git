@@ -44,7 +44,7 @@ int run_history() {
 
     // Build table data: header + rows.
     std::vector<std::vector<std::string>> table_data;
-    table_data.push_back({"#", "Timestamp", "Branch", "Commit", "Files", "Issues", "Blocked"});
+    table_data.push_back({"#", "Timestamp", "Repo", "Branch", "Commit", "Files", "Issues", "Blocked"});
 
     int row_num = 1;
     for (const auto& r : reviews) {
@@ -57,6 +57,7 @@ int run_history() {
         table_data.push_back({
             std::to_string(row_num++),
             r.timestamp,
+            r.repo_name.empty() ? "-" : r.repo_name,
             r.branch,
             short_hash,
             std::to_string(r.files_changed),
@@ -83,7 +84,7 @@ int run_history() {
     }
 
     // "Blocked" column coloring: Y = red, N = green.
-    const int blocked_col = 6;
+    const int blocked_col = 7;
     for (int i = 1; i < static_cast<int>(table_data.size()); ++i) {
         if (table_data[i][blocked_col] == "Y") {
             table.SelectCell(i, blocked_col).DecorateCells(color(Color::RedLight));

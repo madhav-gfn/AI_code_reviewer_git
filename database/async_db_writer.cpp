@@ -18,10 +18,10 @@ AsyncDbWriter::~AsyncDbWriter() {
     }
 }
 
-void AsyncDbWriter::save_review_async(ReviewResult result, std::string branch, bool blocked) {
+void AsyncDbWriter::save_review_async(ReviewResult result, std::string branch, bool blocked, std::string repo_name) {
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        queue_.push(WorkItem{std::move(result), std::move(branch), blocked});
+        queue_.push(WorkItem{std::move(result), std::move(branch), blocked, std::move(repo_name)});
     }
     cv_.notify_one();
 }
@@ -41,7 +41,7 @@ void AsyncDbWriter::worker_loop() {
             lock.unlock();
 
             if (db.is_open()) {
-                db.save_review(item.result, item.branch, item.blocked);
+                db.save_review(item.result, item.branch, item.blocked, item.repo_name);
             }
 
             lock.lock();

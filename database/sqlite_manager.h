@@ -12,6 +12,7 @@ namespace mygit::database {
 struct ReviewRecord {
     int64_t     id            = 0;
     std::string timestamp;        // ISO-8601 from SQLite (e.g. "2026-07-12 17:30:00")
+    std::string repo_name;
     std::string branch;
     std::string commit_hash;
     int         files_changed = 0;
@@ -43,7 +44,7 @@ public:
     // Uses prepared statements inside a transaction for atomicity and
     // SQL-injection safety.
     void save_review(const ReviewResult& result, const std::string& branch,
-                     bool blocked);
+                     bool blocked, const std::string& repo_name = "");
 
     // Returns the last `limit` reviews (most-recent first).
     std::vector<ReviewRecord> get_recent_reviews(int limit = 10);
