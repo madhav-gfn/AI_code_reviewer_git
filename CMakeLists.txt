@@ -70,6 +70,76 @@ target_include_directories(tree_sitter_cpp_grammar PRIVATE
 )
 set_target_properties(tree_sitter_cpp_grammar PROPERTIES LINKER_LANGUAGE C)
 
+# --- Multi-language Tree-sitter grammars (architecture review #3) -----------
+# Same tarball-extract pattern as tree-sitter-cpp above: download + extract +
+# build a tiny static lib, no FetchContent_MakeAvailable (grammar CMakeLists
+# try to regenerate parser.c via the tree-sitter CLI which isn't installed).
+#
+# Helper macro: download a grammar tarball, extract it, and build a static lib.
+macro(add_tree_sitter_grammar NAME VERSION)
+    set(_TS_${NAME}_SRC_DIR "${CMAKE_BINARY_DIR}/_deps/tree-sitter-${NAME}-src")
+    if(NOT EXISTS "${_TS_${NAME}_SRC_DIR}/src/parser.c")
+        file(DOWNLOAD
+            "https://github.com/tree-sitter/tree-sitter-${NAME}/archive/refs/tags/v${VERSION}.tar.gz"
+            "${CMAKE_BINARY_DIR}/_deps/tree-sitter-${NAME}.tar.gz"
+        )
+        file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/_deps/tree-sitter-${NAME}-extracted")
+        file(ARCHIVE_EXTRACT
+            INPUT "${CMAKE_BINARY_DIR}/_deps/tree-sitter-${NAME}.tar.gz"
+            DESTINATION "${CMAKE_BINARY_DIR}/_deps/tree-sitter-${NAME}-extracted"
+        )
+        file(GLOB _TS_${NAME}_DIRS "${CMAKE_BINARY_DIR}/_deps/tree-sitter-${NAME}-extracted/*")
+        list(GET _TS_${NAME}_DIRS 0 _TS_${NAME}_EXTRACTED_DIR)
+        file(RENAME "${_TS_${NAME}_EXTRACTED_DIR}" "${_TS_${NAME}_SRC_DIR}")
+    endif()
+
+    # Build the grammar's parser.c (and scanner.c if it exists) as a static lib.
+    set(_TS_${NAME}_SOURCES "${_TS_${NAME}_SRC_DIR}/src/parser.c")
+    if(EXISTS "${_TS_${NAME}_SRC_DIR}/src/scanner.c")
+        list(APPEND _TS_${NAME}_SOURCES "${_TS_${NAME}_SRC_DIR}/src/scanner.c")
+    endif()
+
+    add_library(tree_sitter_${NAME}_grammar STATIC ${_TS_${NAME}_SOURCES})
+    target_include_directories(tree_sitter_${NAME}_grammar PRIVATE
+        ${_TS_${NAME}_SRC_DIR}/src
+    )
+    set_target_properties(tree_sitter_${NAME}_grammar PROPERTIES LINKER_LANGUAGE C)
+endmacro()
+
+add_tree_sitter_grammar(python      0.23.6)
+add_tree_sitter_grammar(javascript  0.23.1)
+add_tree_sitter_grammar(go          0.23.4)
+add_tree_sitter_grammar(rust        0.23.2)
+add_tree_sitter_grammar(java        0.23.5)
+
+# TypeScript is special: its repo contains two grammars (typescript + tsx)
+# under separate subdirectories, each with their own parser.c/scanner.c.
+set(_TS_typescript_SRC_DIR "${CMAKE_BINARY_DIR}/_deps/tree-sitter-typescript-src")
+if(NOT EXISTS "${_TS_typescript_SRC_DIR}/typescript/src/parser.c")
+    file(DOWNLOAD
+        "https://github.com/tree-sitter/tree-sitter-typescript/archive/refs/tags/v0.23.2.tar.gz"
+        "${CMAKE_BINARY_DIR}/_deps/tree-sitter-typescript.tar.gz"
+    )
+    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/_deps/tree-sitter-typescript-extracted")
+    file(ARCHIVE_EXTRACT
+        INPUT "${CMAKE_BINARY_DIR}/_deps/tree-sitter-typescript.tar.gz"
+        DESTINATION "${CMAKE_BINARY_DIR}/_deps/tree-sitter-typescript-extracted"
+    )
+    file(GLOB _TS_typescript_DIRS "${CMAKE_BINARY_DIR}/_deps/tree-sitter-typescript-extracted/*")
+    list(GET _TS_typescript_DIRS 0 _TS_typescript_EXTRACTED_DIR)
+    file(RENAME "${_TS_typescript_EXTRACTED_DIR}" "${_TS_typescript_SRC_DIR}")
+endif()
+
+set(_TS_TS_SOURCES "${_TS_typescript_SRC_DIR}/typescript/src/parser.c")
+if(EXISTS "${_TS_typescript_SRC_DIR}/typescript/src/scanner.c")
+    list(APPEND _TS_TS_SOURCES "${_TS_typescript_SRC_DIR}/typescript/src/scanner.c")
+endif()
+add_library(tree_sitter_typescript_grammar STATIC ${_TS_TS_SOURCES})
+target_include_directories(tree_sitter_typescript_grammar PRIVATE
+    ${_TS_typescript_SRC_DIR}/typescript/src
+)
+set_target_properties(tree_sitter_typescript_grammar PROPERTIES LINKER_LANGUAGE C)
+
 
 # --- Core library --------------------------------------------------------
 # Explicitly STATIC: without this, mygit_core follows BUILD_SHARED_LIBS,
@@ -87,6 +157,7 @@ add_library(mygit_core STATIC
     commands/install_command.cpp
     commands/setup_command.cpp
     commands/daemon_command.cpp
+    commands/init_command.cpp
     config/mygit_config.cpp
     diff_filter/diff_filter.cpp
     git/git_diff.cpp
@@ -131,6 +202,12 @@ target_link_libraries(mygit_core PUBLIC
     faiss
     unofficial::tree-sitter::tree-sitter
     tree_sitter_cpp_grammar
+    tree_sitter_python_grammar
+    tree_sitter_javascript_grammar
+    tree_sitter_typescript_grammar
+    tree_sitter_go_grammar
+    tree_sitter_rust_grammar
+    tree_sitter_java_grammar
 )
 
 # Toggle for the ONNX Runtime CUDA execution provider (rag/embedder.cpp).

@@ -55,6 +55,14 @@ public:
     // that identically to "no context" (today's zero-RAG behavior).
     std::string get_context_for_diff(const std::string& patch_text, int top_k = 3) const;
 
+    // Returns stats about the current state of the index (for display after
+    // `mygit init`). Returns zeroes if !available().
+    struct IndexStats {
+        int files_indexed = 0;
+        int units_indexed = 0;
+    };
+    IndexStats index_stats() const;
+
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;

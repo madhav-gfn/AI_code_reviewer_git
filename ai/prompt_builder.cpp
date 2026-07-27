@@ -37,7 +37,17 @@ std::string commit_message_instructions() {
 }  // namespace
 
 std::string PromptBuilder::build_review_prompt(const std::string& diff) const {
-    return review_instructions() + "Diff:\n" + diff;
+    return build_review_prompt(diff, "");
+}
+
+std::string PromptBuilder::build_review_prompt(const std::string& diff,
+                                                 const std::string& context) const {
+    if (context.empty()) {
+        return review_instructions() + "Diff:\n" + diff;
+    }
+    return review_instructions() +
+           "Repository context (for reference; do not describe it as changed):\n" + context +
+           "\n\nDiff:\n" + diff;
 }
 
 std::string PromptBuilder::build_commit_message_prompt(const std::string& diff) const {
@@ -56,7 +66,18 @@ std::string PromptBuilder::build_commit_message_prompt(const std::string& diff,
 
 std::string PromptBuilder::build_single_file_review_prompt(const std::string& file_path,
                                                              const std::string& file_diff) const {
-    return review_instructions() + "File: " + file_path + "\nDiff:\n" + file_diff;
+    return build_single_file_review_prompt(file_path, file_diff, "");
+}
+
+std::string PromptBuilder::build_single_file_review_prompt(const std::string& file_path,
+                                                             const std::string& file_diff,
+                                                             const std::string& context) const {
+    if (context.empty()) {
+        return review_instructions() + "File: " + file_path + "\nDiff:\n" + file_diff;
+    }
+    return review_instructions() +
+           "Repository context (for reference; do not describe it as changed):\n" + context +
+           "\n\nFile: " + file_path + "\nDiff:\n" + file_diff;
 }
 
 SplitPrompt PromptBuilder::build_review_prompt_split(const std::string& diff) const {
@@ -82,6 +103,27 @@ SplitPrompt PromptBuilder::build_commit_message_prompt_split(const std::string& 
 SplitPrompt PromptBuilder::build_single_file_review_prompt_split(
     const std::string& file_path, const std::string& file_diff) const {
     return SplitPrompt{review_instructions(), "File: " + file_path + "\nDiff:\n" + file_diff};
+}
+
+SplitPrompt PromptBuilder::build_review_prompt_split(const std::string& diff,
+                                                       const std::string& context) const {
+    if (context.empty()) {
+        return build_review_prompt_split(diff);
+    }
+    return SplitPrompt{review_instructions(),
+                        "Repository context (for reference; do not describe it as changed):\n" +
+                            context + "\n\nDiff:\n" + diff};
+}
+
+SplitPrompt PromptBuilder::build_single_file_review_prompt_split(
+    const std::string& file_path, const std::string& file_diff,
+    const std::string& context) const {
+    if (context.empty()) {
+        return build_single_file_review_prompt_split(file_path, file_diff);
+    }
+    return SplitPrompt{review_instructions(),
+                        "Repository context (for reference; do not describe it as changed):\n" +
+                            context + "\n\nFile: " + file_path + "\nDiff:\n" + file_diff};
 }
 
 }  // namespace mygit::ai

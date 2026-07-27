@@ -4,6 +4,29 @@ All notable changes to the `mygit` project are documented in this file.
 
 ---
 
+## [Unreleased] - 2026-07-26
+
+### ✨ Features & Enhancements (Architecture Review Remaining Items)
+
+#### 1. Multi-Language Tree-sitter Grammar Support (Bottleneck #3)
+- **What Changed**: The RAG code parser now supports **Python, JavaScript, TypeScript, Go, Rust, and Java** in addition to C/C++. Each language has a dedicated AST walker that extracts functions, methods, classes, and structs as `CodeUnit`s.
+- **Files**: `CMakeLists.txt` (6 new grammar downloads via tarball-extract macro), `rag/code_parser.h`, `rag/code_parser.cpp`
+- **API**: `is_parseable_file()` replaces `is_cpp_source_file()` as the primary check; backward-compatible inline alias retained.
+
+#### 2. Universal Text-Chunking Fallback (Bottleneck #3)
+- **What Changed**: Files without a Tree-sitter grammar (Markdown, YAML, config files, etc.) are now indexed using a sliding-window text chunker (~40 lines per chunk, 10-line overlap). Every repository gets embedded regardless of programming language.
+- **Files**: `rag/code_parser.cpp` (`text_chunk()`), `rag/rag_orchestrator.cpp` (filter changed to `is_indexable_file()`)
+
+#### 3. `mygit init` Command
+- **What Changed**: New CLI command that explicitly builds (or updates) the RAG embedding index for the current Git repository. Index is stored per-repo in `.git/mygit/` (rag.db + rag.index); global ONNX model weights remain in `~/.mygit/models/`.
+- **Files**: `commands/init_command.h` [NEW], `commands/init_command.cpp` [NEW], `src/main.cpp` (registered)
+
+#### 4. Repository-Aware Context in Reviews (Bottleneck #3)
+- **What Changed**: `mygit review` now retrieves RAG context (same pipeline as `mygit commit`) and includes it in review prompts, so the AI can see what changed functions actually do instead of guessing from diff lines alone. Falls back to zero-RAG behavior if not initialized.
+- **Files**: `commands/review_command.cpp`, `ai/prompt_builder.h`, `ai/prompt_builder.cpp` (context-aware review prompt overloads)
+
+---
+
 ## [Unreleased] - 2026-07-23
 
 ### 🐛 Bug Fixes & Architecture Improvements

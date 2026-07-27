@@ -5,6 +5,7 @@
 #include "commands/commit_command.h"
 #include "commands/daemon_command.h"
 #include "commands/history_command.h"
+#include "commands/init_command.h"
 #include "commands/install_command.h"
 #include "commands/push_command.h"
 #include "commands/review_command.h"
@@ -23,6 +24,7 @@ void print_usage() {
               << "    mygit push <remote> <branch>        -- review then push\n"
               << "    mygit push <remote> <branch> --force-ai\n"
               << "    mygit history                       -- show last 10 reviews\n"
+              << "    mygit init                          -- build RAG embedding index for this repo\n"
               << "    mygit daemon <start|stop|status>    -- manage the background model daemon\n"
               << "\n";
 }
@@ -82,6 +84,10 @@ int main(int argc, char** argv) {
 
         if (command == "history") {
             return mygit::commands::run_history();
+        }
+
+        if (command == "init") {
+            return mygit::commands::run_init();
         }
 
         if (command == "daemon") {

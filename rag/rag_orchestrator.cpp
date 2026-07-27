@@ -98,7 +98,7 @@ void RagOrchestrator::update_index() {
         std::unordered_set<std::string> tracked_set;
 
         for (const std::string& file_path : tracked) {
-            if (!is_cpp_source_file(file_path)) continue;
+            if (!is_indexable_file(file_path)) continue;
             tracked_set.insert(file_path);
 
             const std::optional<std::string> content = read_file(file_path);
@@ -166,6 +166,22 @@ std::string RagOrchestrator::get_context_for_diff(const std::string& patch_text,
         std::cerr << "[rag] context retrieval failed: " << e.what() << "\n";
         return "";
     }
+}
+
+RagOrchestrator::IndexStats RagOrchestrator::index_stats() const {
+    IndexStats stats;
+    if (!available()) return stats;
+    try {
+        const std::vector<std::string> files = impl_->store.indexed_file_paths();
+        stats.files_indexed = static_cast<int>(files.size());
+        // Count units across all indexed files via the store's metadata.
+        // indexed_file_paths returns every file that has at least one unit,
+        // but for a unit count we need the FAISS/metadata total.
+        // For now, approximate: the store doesn't expose a unit count
+        // directly, but files_indexed is useful enough for UI.
+        stats.units_indexed = stats.files_indexed;  // will refine if VectorStore gains a count API
+    } catch (...) {}
+    return stats;
 }
 
 }  // namespace mygit::rag

@@ -15,10 +15,16 @@
 #include "decision_engine/decision_engine.h"
 #include "diff_filter/diff_filter.h"
 #include "git/git_diff.h"
+#include "git/git_runner.h"
 #include "git/git_status.h"
 #include "logger/review_logger.h"
 #include "parsers/json_parser.h"
+#include "rag/rag_orchestrator.h"
 #include "ui/terminal_ui.h"
+
+#include <filesystem>
+#include <mutex>
+#include <thread>
 
 namespace mygit::commands {
 
@@ -65,7 +71,8 @@ const daemon::DaemonClient& ensure_daemon(const daemon::DaemonClient& client, bo
 ReviewResult run_batched_review(const daemon::DaemonClient& daemon_client, bool& daemon_ready,
                                  const ai::PromptBuilder& prompt_builder,
                                  const diff_filter::FilteredDiff& filtered,
-                                 database::SqliteManager& cache) {
+                                 database::SqliteManager& cache,
+                                 const std::string& rag_context) {
     const parsers::JsonParser parser;
 
     if (filtered.kept_files.size() == 1) {
@@ -78,7 +85,7 @@ ReviewResult run_batched_review(const daemon::DaemonClient& daemon_client, bool&
             return cached;
         }
 
-        const std::string prompt = prompt_builder.build_single_file_review_prompt(path, fd.patch);
+        const std::string prompt = prompt_builder.build_single_file_review_prompt(path, fd.patch, rag_context);
         ReviewResult result =
             parser.parse_review(ensure_daemon(daemon_client, daemon_ready).review(prompt));
         cache.save_cached_file_review(hash, result);
@@ -93,7 +100,7 @@ ReviewResult run_batched_review(const daemon::DaemonClient& daemon_client, bool&
             return cached;
         }
 
-        const std::string prompt = prompt_builder.build_review_prompt(filtered.patch_text);
+        const std::string prompt = prompt_builder.build_review_prompt(filtered.patch_text, rag_context);
         ReviewResult result =
             parser.parse_review(ensure_daemon(daemon_client, daemon_ready).review(prompt));
         cache.save_cached_file_review(hash, result);
@@ -119,7 +126,7 @@ ReviewResult run_batched_review(const daemon::DaemonClient& daemon_client, bool&
 
     for (const auto& [fd_ptr, hash] : misses) {
         const ai::SplitPrompt prompt = prompt_builder.build_single_file_review_prompt_split(
-            display_path(*fd_ptr), fd_ptr->patch);
+            display_path(*fd_ptr), fd_ptr->patch, rag_context);
         ReviewResult result =
             parser.parse_review(ensure_daemon(daemon_client, daemon_ready).review(prompt));
         cache.save_cached_file_review(hash, result);
@@ -175,6 +182,40 @@ int run_review() {
     // daemon at all, so they can't go through the async writer.
     database::SqliteManager review_cache(db_path);
 
+    // RAG pipeline (bottleneck #3 — repository-aware context retrieval).
+    // Same setup as commit_command: per-repo storage in .git/mygit/,
+    // global model weights in ~/.mygit/models/. Construction never throws;
+    // if the embedding model isn't set up, available() is false and
+    // everything below becomes a no-op (zero-RAG behavior preserved).
+    const std::string git_dir_raw = git::run_git_capture("rev-parse --git-dir");
+    std::filesystem::path rag_dir;
+    if (!git_dir_raw.empty()) {
+        rag_dir = std::filesystem::absolute(git_dir_raw) / "mygit";
+    } else {
+        rag_dir = config::get_config_dir();
+    }
+    const std::string rag_db_path = (rag_dir / "rag.db").string();
+    const std::string rag_index_path = (rag_dir / "rag.index").string();
+
+    rag::RagOrchestrator rag_orchestrator(
+        rag_db_path,
+        rag_index_path,
+        (config::get_config_dir() / "models" / "embedding_model.onnx").string(),
+        (config::get_config_dir() / "models" / "tokenizer.json").string());
+    std::thread rag_index_thread;
+    if (rag_orchestrator.available()) {
+        rag_index_thread = std::thread([&rag_orchestrator]() { rag_orchestrator.update_index(); });
+    }
+    struct ThreadJoinGuard {
+        std::thread& t;
+        ~ThreadJoinGuard() { if (t.joinable()) t.join(); }
+    } rag_index_join_guard{rag_index_thread};
+
+    // Wait for RAG index update to finish before retrieving context.
+    if (rag_index_thread.joinable()) rag_index_thread.join();
+    const std::string rag_context =
+        rag_orchestrator.get_context_for_diff(filtered.patch_text);
+
     ReviewResult result;
     long long inference_ms = 0;
     const daemon::DaemonClient daemon_client;
@@ -184,7 +225,7 @@ int run_review() {
         auto start = std::chrono::steady_clock::now();
         try {
             result = run_batched_review(daemon_client, daemon_ready, prompt_builder, filtered,
-                                         review_cache);
+                                         review_cache, rag_context);
         } catch (const std::exception& e) {
             spinner.stop();
             std::cerr << "\n  AI review failed: " << e.what() << "\n\n";

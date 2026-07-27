@@ -21,6 +21,13 @@ public:
     // respond using the FR-5 JSON schema.
     std::string build_review_prompt(const std::string& diff) const;
 
+    // Same, but with repository context retrieved by
+    // rag::RagOrchestrator::get_context_for_diff() inserted above the diff
+    // (bottleneck #3 - repository-aware context retrieval for reviews).
+    // `context` may be "" (RAG not set up, or nothing relevant found), in
+    // which case this is identical to the single-argument overload.
+    std::string build_review_prompt(const std::string& diff, const std::string& context) const;
+
     // Builds a prompt that instructs the model to generate a single
     // Conventional Commits message from the given diff.
     std::string build_commit_message_prompt(const std::string& diff) const;
@@ -40,6 +47,11 @@ public:
     std::string build_single_file_review_prompt(const std::string& file_path,
                                                  const std::string& file_diff) const;
 
+    // Context-aware variant for per-file reviews.
+    std::string build_single_file_review_prompt(const std::string& file_path,
+                                                 const std::string& file_diff,
+                                                 const std::string& context) const;
+
     // Split equivalents of the above. The prefix is identical across calls
     // for a given prompt kind (build_single_file_review_prompt_split's
     // prefix does NOT depend on file_path, so it stays cacheable across an
@@ -48,6 +60,14 @@ public:
     SplitPrompt build_commit_message_prompt_split(const std::string& diff) const;
     SplitPrompt build_single_file_review_prompt_split(const std::string& file_path,
                                                        const std::string& file_diff) const;
+
+    // Context-aware split variants for reviews. Context goes in the suffix
+    // (not prefix) to preserve the Level 1 prefix-KV-cache hit.
+    SplitPrompt build_review_prompt_split(const std::string& diff,
+                                           const std::string& context) const;
+    SplitPrompt build_single_file_review_prompt_split(const std::string& file_path,
+                                                       const std::string& file_diff,
+                                                       const std::string& context) const;
 
     // Context-aware split variant. `context` goes in the dynamic suffix
     // alongside the diff (not the prefix) since it changes per diff -
