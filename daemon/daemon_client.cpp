@@ -21,7 +21,7 @@ namespace {
 
 constexpr int kHealthCheckReadTimeoutSec = 2;
 constexpr int kWorkReadTimeoutSec = 300;  // inference can be slow
-constexpr int kAutoStartTimeoutSec = 30;
+constexpr int kAutoStartTimeoutSec = 120;
 
 httplib::Client make_client(int port, int read_timeout_sec) {
     httplib::Client cli("127.0.0.1", port);
@@ -78,18 +78,48 @@ void spawn_detached_daemon() {
     const std::string exe = current_executable_path();
 #if defined(_WIN32)
     std::string cmdline = "\"" + exe + "\" daemon start";
+
+    // The detached process has no console, so stdout/stderr are invalid
+    // handles. Model loading (llama.cpp), spdlog, and ONNX Runtime all
+    // write to stdout/stderr — those writes crash the process when the
+    // handles are invalid. Redirect both to a log file so the daemon
+    // survives and we get diagnostics on failure.
+    const char* profile = std::getenv("USERPROFILE");
+    std::string log_path;
+    if (profile) {
+        log_path = std::string(profile) + "\\.mygit\\daemon.log";
+    } else {
+        log_path = "daemon.log";
+    }
+
+    SECURITY_ATTRIBUTES sa{};
+    sa.nLength = sizeof(sa);
+    sa.bInheritHandle = TRUE;
+    HANDLE hLog = CreateFileA(log_path.c_str(), GENERIC_WRITE,
+                              FILE_SHARE_READ | FILE_SHARE_WRITE, &sa,
+                              CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+
     STARTUPINFOA si{};
     si.cb = sizeof(si);
+    if (hLog != INVALID_HANDLE_VALUE) {
+        si.dwFlags = STARTF_USESTDHANDLES;
+        si.hStdOutput = hLog;
+        si.hStdError  = hLog;
+        si.hStdInput  = nullptr;
+    }
+
     PROCESS_INFORMATION pi{};
     // DETACHED_PROCESS: no console attached, so the daemon survives the
     // parent CLI process exiting and doesn't print to (or get Ctrl+C'd via)
     // the user's terminal. CREATE_NEW_PROCESS_GROUP so console signals sent
     // to this process don't propagate to the daemon either.
-    if (CreateProcessA(nullptr, cmdline.data(), nullptr, nullptr, FALSE,
+    if (CreateProcessA(nullptr, cmdline.data(), nullptr, nullptr,
+                        hLog != INVALID_HANDLE_VALUE ? TRUE : FALSE,
                         DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP, nullptr, nullptr, &si, &pi)) {
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
     }
+    if (hLog != INVALID_HANDLE_VALUE) CloseHandle(hLog);
 #else
     // Simple POSIX fallback: background the process via the shell so it
     // detaches from the current terminal session.

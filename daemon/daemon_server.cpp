@@ -12,6 +12,11 @@
 #include <mutex>
 #include <thread>
 
+#if defined(_WIN32)
+#include <winsock2.h>
+#pragma comment(lib, "ws2_32.lib")
+#endif
+
 #include "ai/llama_client.h"
 #include "ai/prompt_builder.h"
 
@@ -66,7 +71,17 @@ ParsedPrompt parse_prompt(const nlohmann::json& body) {
 struct DaemonServer::Impl {
     Impl(std::string model_path, int gpu_layers, int port_in)
         : port(port_in), llama_client(std::move(model_path), gpu_layers) {
+#if defined(_WIN32)
+        WSADATA wsaData;
+        WSAStartup(MAKEWORD(2, 2), &wsaData);
+#endif
         last_activity_ms.store(now_ms());
+    }
+
+    ~Impl() {
+#if defined(_WIN32)
+        WSACleanup();
+#endif
     }
 
     int port;
@@ -198,12 +213,15 @@ void DaemonServer::run() {
     impl_->start_idle_timer();
 
     spdlog::info("mygit daemon listening on 127.0.0.1:{}", impl_->port);
-    impl_->server.listen("127.0.0.1", impl_->port);
+    if (!impl_->server.listen("127.0.0.1", impl_->port)) {
+        spdlog::error("Failed to bind to 127.0.0.1:{} - port may be in use or access denied", impl_->port);
+    }
 
     // listen() returned - either /shutdown, a signal, or the idle timer
     // stopped the server. Tear the watcher thread down so the port and
     // process can exit cleanly (spec: "the port is freed").
     impl_->stop_idle_timer();
+    spdlog::info("daemon run() completed.");
     g_server_for_signal.store(nullptr);
 }
 

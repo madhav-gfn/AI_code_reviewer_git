@@ -49,7 +49,7 @@ int run_daemon_start(bool detached) {
 
     std::cout << "\n  Starting mygit daemon in the background...\n";
     daemon::spawn_detached_daemon();
-    if (daemon::wait_for_daemon_ready(daemon::resolve_port(), 30)) {
+    if (daemon::wait_for_daemon_ready(daemon::resolve_port(), 120)) {
         std::cout << "  mygit daemon is ready.\n\n";
         return 0;
     }

@@ -6,7 +6,7 @@
 namespace mygit::daemon {
 
 // Localhost port the daemon listens on, unless overridden.
-constexpr int kDefaultPort = 49152;
+constexpr int kDefaultPort = 49352;
 
 // How long the daemon can sit idle (no /review or /commit activity) before
 // it shuts itself down to free the loaded model's VRAM/RAM.

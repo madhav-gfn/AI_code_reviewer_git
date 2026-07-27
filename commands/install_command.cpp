@@ -235,18 +235,37 @@ int run_install() {
         }
 
         // 3. Copy the executable (overwrite if it already exists).
-        //    On Windows the running exe cannot be overwritten directly, but
-        //    the destination is a *different* path, so this is fine.
-        fs::copy_file(src, dst, fs::copy_options::overwrite_existing, ec);
-        if (ec) {
-            std::cerr << "  Error copying executable: " << ec.message() << "\n";
-            return 1;
+        //    When run from the already-installed location the source and
+        //    destination are the same file — Windows locks the running .exe
+        //    so copy_file would fail.  Detect that case and skip the copy.
+        bool same_file = false;
+        if (fs::exists(dst)) {
+            std::error_code eq_ec;
+            same_file = fs::equivalent(src, dst, eq_ec);
         }
-        std::cout << "  Copied " << src.filename() << " -> " << dst << "\n";
+
+        if (same_file) {
+            std::cout << "  " << dst << " is already up to date.\n";
+        } else {
+            fs::copy_file(src, dst, fs::copy_options::overwrite_existing, ec);
+            if (ec) {
+                std::cerr << "  Error copying executable: " << ec.message() << "\n";
+                return 1;
+            }
+            std::cout << "  Copied " << src.filename() << " -> " << dst << "\n";
+        }
 
         // Also copy any sibling DLL files that the executable depends on
         // (e.g. llama.dll, ggml.dll, ggml-base.dll, ggml-cpu.dll).
+        // If running from the installed directory, src_dir == dst_dir and
+        // all DLLs are already in place — skip the loop entirely.
         const fs::path src_dir = src.parent_path();
+        bool same_dir = false;
+        {
+            std::error_code eq_ec;
+            same_dir = fs::equivalent(src_dir, dst_dir, eq_ec);
+        }
+        if (!same_dir) {
         for (const auto& entry : fs::directory_iterator(src_dir)) {
             if (!entry.is_regular_file()) continue;
             const auto ext = entry.path().extension().string();
@@ -266,6 +285,7 @@ int run_install() {
                 }
             }
         }
+        }  // if (!same_dir)
 
 #ifndef _WIN32
         // Make sure the installed binary is executable.
