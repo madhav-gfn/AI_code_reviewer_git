@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include "mygit/types.h"
 
@@ -53,6 +54,10 @@ public:
     // hash_diff_content). Returns true and fills `out` on a hit, letting the
     // caller skip re-running inference on a diff it has already reviewed.
     bool get_cached_file_review(const std::string& hash, ReviewResult& out);
+
+    // Looks up multiple previously-computed reviews in a single query.
+    // Fills `out` with all cache hits found for the provided `hashes`.
+    void get_cached_file_reviews(const std::vector<std::string>& hashes, std::unordered_map<std::string, ReviewResult>& out);
 
     // Stores `result` under `hash` for future reuse by get_cached_file_review().
     void save_cached_file_review(const std::string& hash, const ReviewResult& result);
