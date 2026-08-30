@@ -320,6 +320,38 @@ bool SqliteManager::get_cached_file_review(const std::string& hash, ReviewResult
     return found;
 }
 
+void SqliteManager::get_cached_file_reviews(const std::vector<std::string>& hashes, std::unordered_map<std::string, ReviewResult>& out) {
+    if (!db_ || hashes.empty()) return;
+    auto* db = static_cast<sqlite3*>(db_);
+
+    std::string sql = "SELECT hash, safe, issues_json FROM file_review_cache WHERE hash IN (";
+    for (size_t i = 0; i < hashes.size(); ++i) {
+        sql += "?";
+        if (i < hashes.size() - 1) sql += ", ";
+    }
+    sql += ");";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        return;
+    }
+
+    for (size_t i = 0; i < hashes.size(); ++i) {
+        sqlite3_bind_text(stmt, i + 1, hashes[i].c_str(), -1, SQLITE_TRANSIENT);
+    }
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        std::string hash = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+        ReviewResult result;
+        result.safe = sqlite3_column_int(stmt, 1) != 0;
+        const unsigned char* text = sqlite3_column_text(stmt, 2);
+        result.issues = issues_from_json(text ? reinterpret_cast<const char*>(text) : "[]");
+        out[hash] = std::move(result);
+    }
+
+    sqlite3_finalize(stmt);
+}
+
 void SqliteManager::save_cached_file_review(const std::string& hash, const ReviewResult& result) {
     if (!db_) return;
     auto* db = static_cast<sqlite3*>(db_);
