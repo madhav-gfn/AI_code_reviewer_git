@@ -134,10 +134,14 @@ void RagOrchestrator::update_index() {
         // tracked (deleted, or renamed - git ls-files reports renames as a
         // delete-at-old-path + add-at-new-path pair, so the new path is
         // handled by the loop above and the old one is caught here).
+        std::vector<std::string> to_remove;
         for (const std::string& previously_indexed : impl_->store.indexed_file_paths()) {
             if (!tracked_set.count(previously_indexed)) {
-                impl_->store.remove_file(previously_indexed);
+                to_remove.push_back(previously_indexed);
             }
+        }
+        if (!to_remove.empty()) {
+            impl_->store.remove_files(to_remove);
         }
 
         impl_->store.save();

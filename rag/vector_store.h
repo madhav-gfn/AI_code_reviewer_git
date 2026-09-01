@@ -50,6 +50,9 @@ public:
     // a fresh graph) once they cross an internal threshold.
     void remove_file(const std::string& file_path);
 
+    // Batched version of remove_file for removing multiple files efficiently.
+    void remove_files(const std::vector<std::string>& file_paths);
+
     // Returns up to `top_k` CodeUnits whose embeddings are closest (cosine
     // similarity, via inner product on L2-normalized vectors) to `query`.
     // Returns an empty vector if the index doesn't exist yet or is empty.
