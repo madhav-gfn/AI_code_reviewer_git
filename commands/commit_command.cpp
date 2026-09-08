@@ -12,6 +12,13 @@
 
 #include "ai/prompt_builder.h"
 #include "ai/review_aggregator.h"
+
+#if defined(_WIN32)
+#include <process.h>
+#else
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
 #include "config/mygit_config.h"
 #include "daemon/daemon_client.h"
 #include "database/async_db_writer.h"
@@ -202,6 +209,55 @@ char prompt_user_choice() {
     return static_cast<char>(std::tolower(static_cast<unsigned char>(input[0])));
 }
 
+std::vector<std::string> parse_editor_args(const std::string& args_str) {
+    std::vector<std::string> args;
+    std::string current_arg;
+    bool in_double_quotes = false;
+    bool in_single_quotes = false;
+    bool escaped = false;
+
+    for (char c : args_str) {
+        if (escaped) {
+            current_arg += c;
+            escaped = false;
+        } else if (c == '\\' && !in_single_quotes) {
+#if defined(_WIN32)
+            // On Windows, backslashes are mostly used as directory separators.
+            // Only escape if it's escaping a double quote. This is a simplified
+            // approach but handles C:\path\to\editor.exe and "C:\path\" correctly enough
+            // for simple EDITOR variables.
+            current_arg += c;
+#else
+            escaped = true;
+#endif
+        } else if (c == '"' && !in_single_quotes) {
+#if defined(_WIN32)
+            if (!current_arg.empty() && current_arg.back() == '\\') {
+                current_arg.pop_back();
+                current_arg += c;
+            } else {
+                in_double_quotes = !in_double_quotes;
+            }
+#else
+            in_double_quotes = !in_double_quotes;
+#endif
+        } else if (c == '\'' && !in_double_quotes) {
+            in_single_quotes = !in_single_quotes;
+        } else if (c == ' ' && !in_double_quotes && !in_single_quotes) {
+            if (!current_arg.empty()) {
+                args.push_back(current_arg);
+                current_arg.clear();
+            }
+        } else {
+            current_arg += c;
+        }
+    }
+    if (!current_arg.empty()) {
+        args.push_back(current_arg);
+    }
+    return args;
+}
+
 // Opens $EDITOR (or notepad/vi as fallback) with a temp file containing
 // `initial_content`, waits for the editor to close, and returns the
 // file contents. Returns empty string on failure.
@@ -230,8 +286,27 @@ std::string open_editor_with(const std::string& initial_content) {
 #endif
     }
 
-    const std::string cmd = editor + " \"" + tmp_path.string() + "\"";
-    std::system(cmd.c_str());
+    std::vector<std::string> parsed_args = parse_editor_args(editor);
+    parsed_args.push_back(tmp_path.string());
+
+    std::vector<char*> c_args;
+    for (const auto& arg : parsed_args) {
+        c_args.push_back(const_cast<char*>(arg.c_str()));
+    }
+    c_args.push_back(nullptr);
+
+#if defined(_WIN32)
+    _spawnvp(_P_WAIT, c_args[0], c_args.data());
+#else
+    pid_t pid = fork();
+    if (pid == 0) {
+        execvp(c_args[0], c_args.data());
+        _exit(127);
+    } else if (pid > 0) {
+        int status;
+        waitpid(pid, &status, 0);
+    }
+#endif
 
     // Read back.
     std::ifstream f(tmp_path);
