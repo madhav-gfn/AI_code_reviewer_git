@@ -1,158 +1,221 @@
-# mygit - The Ultimate AI-Powered Code Reviewer
+<div align="center">
 
+# mygit
+**The Ultimate AI-Powered Code Reviewer**
 
-Please do read architecture_review.md file to know the scope of project and the potential improvements it can have
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
+[![C++20](https://img.shields.io/badge/C++-20-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B20)
+[![libgit2](https://img.shields.io/badge/libgit2-native-orange.svg)](https://libgit2.org/)
+[![llama.cpp](https://img.shields.io/badge/llama.cpp-local%20inference-green.svg)](https://github.com/ggerganov/llama.cpp)
 
-When I set out to build mygit, my primary goal was to create a local LLM code reviewer that did not compromise on speed, privacy, or reliability. I quickly hit my first major roadblock: using basic shell commands to extract git diffs proved incredibly brittle and prone to unpredictable parsing errors across different operating systems. To solve this, I completely ripped out the shell integrations and natively embedded libgit2 into the project. This allowed the tool to interface directly with the Git object database, pulling the exact index structures straight from memory without any subshell overhead.
+A blazingly fast, C++20-native CLI wrapper around Git that enforces a strict, local LLM-powered code review pipeline *before* letting you push or commit your code.
 
-The next massive hurdle was the unreliability of LLM outputs. Asking an AI model to return JSON usually results in random markdown blocks, trailing commas, or complete hallucinations that crash the parser. To fix this, I deeply integrated llama.cpp and utilized GGML BNF (GBNF) grammars. By applying this grammar at the sampling layer, the model is mathematically forced to adhere strictly to the expected JSON schema. This completely eliminated parsing errors, allowing the decision engine to accurately and safely block commits based on severity levels.
+**Zero Cloud. Zero API Keys. Zero Telemetry. 100% Local.**
 
-mygit is a blazingly fast, C++20-native CLI wrapper around Git. It enforces a strict, local LLM-powered code review pipeline before letting you push or commit your code. By running inferences entirely on your own hardware via llama.cpp and libgit2, mygit guarantees total code privacy, zero network latency, and unparalleled reliability through grammar-constrained AI outputs.
+</div>
 
-## How Codex & GPT-5.6 Were Used
+---
 
-This project was built with OpenAI Codex (powered by GPT-5.6) as the primary development partner, using a spec-first workflow:
+## The Philosophy & Approach
 
-- **Spec-first feature development.** Every major module began as a written prompt spec handed to Codex. The actual working prompt library is checked into this repo at [docs/prompts.md](docs/prompts.md) — the specs that drove the `mygit install` command, the FTXUI terminal UI, spdlog review logging, the SQLite memory system, commit message generation, and the libgit2 migration are all there verbatim. Each spec pins down the exact public API, file layout, and constraints before any code is generated, so Codex output lands in a shape the rest of the codebase already expects.
-- **Module scaffolding and iteration.** Codex generated first implementations of the subsystems (diff filtering, the RAG pipeline, the daemon, async DB writer), which were then reviewed, tightened, and integrated by hand. The architecture and its constraints (Pimpl header hygiene, RAII wrappers over C handles, graceful-fallback rules) live in [docs/architecture_review.md](docs/architecture_review.md) and were enforced across generated code.
-- **Toolchain debugging.** GPT-5.6 was used heavily to diagnose the ONNX Runtime + CUDA 13 + preview-MSVC build failures. The surviving fixes (pinned CUDA architectures, `/Zc:preprocessor`, the `extern template` linker patch, disabled contrib ops) are documented in [vcpkg-overlays/onnxruntime/](vcpkg-overlays/onnxruntime/).
-- **The dogfooding loop.** AI-written code did not get a free pass: every commit produced with Codex was reviewed by mygit itself before it was allowed into the repo. AI wrote the code, and an AI gatekeeper judged it.
+When setting out to build `mygit`, the primary goal was to create a local LLM code reviewer that did not compromise on **speed, privacy, or reliability**.
 
-## Key Features & Innovations
+**The Hurdles & Solutions:**
+1. **Brittle Shell Commands:** Initially, using basic shell commands to extract git diffs proved incredibly brittle and prone to unpredictable parsing errors across different operating systems.
+   * **The Fix:** Completely ripped out the shell integrations and natively embedded `libgit2`. This allows the tool to interface directly with the Git object database, pulling the exact index structures straight from memory without any subshell overhead.
+2. **LLM Hallucinations & Parsing Errors:** Asking an AI model to return JSON usually results in random markdown blocks, trailing commas, or complete hallucinations that crash the parser.
+   * **The Fix:** Deeply integrated `llama.cpp` and utilized GGML BNF (GBNF) grammars. By applying this grammar at the sampling layer, the model is mathematically forced to adhere strictly to the expected JSON schema. This completely eliminated parsing errors, allowing the decision engine to accurately and safely block commits based on severity levels.
 
-### Local AI Inference (llama.cpp)
-No cloud, no API keys, no monthly fees, no network calls. mygit loads and runs .gguf language models entirely locally.
-- Hardware Acceleration: Seamlessly offloads layers to the GPU (via CUDA/Vulkan) or falls back to highly optimized CPU inference.
-- Persistent Context: The LlamaClient object manages its own KV cache and context, avoiding model reloading penalties across consecutive operations.
+By running inferences entirely on your own hardware via `llama.cpp` and `libgit2`, `mygit` guarantees total code privacy, zero network latency, and unparalleled reliability.
+
+---
+
+## Key Features & Technical Marvels
+
+### Local AI Inference (`llama.cpp`)
+No cloud, no API keys, no monthly fees, no network calls. `mygit` loads and runs `.gguf` language models entirely locally.
+* **Hardware Acceleration:** Seamlessly offloads layers to the GPU (via CUDA/Vulkan) or falls back to highly optimized CPU inference.
+* **Persistent Context:** The `LlamaClient` object manages its own KV cache and context, avoiding model reloading penalties across consecutive operations.
 
 ### Grammar-Constrained JSON (GBNF)
-Instead of relying on fragile "prompt engineering" to get the AI to output valid JSON, mygit uses GBNF (GGML BNF) grammars directly at the sampling level. 
-- The model is physically constrained and is mathematically incapable of generating anything other than our strictly defined JSON schema.
-- Zero parsing errors. The JSON parser receives perfectly structured JSON objects every single time.
+Instead of relying on fragile "prompt engineering", `mygit` uses GBNF (GGML BNF) grammars directly at the sampling level.
+* The model is physically constrained and is mathematically incapable of generating anything other than our strictly defined JSON schema.
+* **Zero parsing errors.** The JSON parser receives perfectly structured JSON objects every single time.
 
 ### Decision Engine & Verdicts
 The code review parses the AI's feedback into structured severities (critical, high, medium, low).
-- Blocking Commits: If the AI detects a critical severity issue (like a security vulnerability, hardcoded secret, or fatal bug), mygit immediately halts the commit or push process.
-- Force Override: Developers retain ultimate control. Passing the --force-ai flag explicitly overrides the AI's verdict.
+* **Blocking Commits:** If the AI detects a critical severity issue (e.g., security vulnerability, hardcoded secret, fatal bug), `mygit` immediately halts the commit or push process.
+* **Force Override:** Developers retain ultimate control. Passing the `--force-ai` flag explicitly overrides the AI's verdict.
 
 ### Auto-Generated Conventional Commits
-Forget staring at a blank terminal trying to summarize your changes. 
-- Running mygit commit (without the -m flag) triggers the AI to analyze your staged diff and generate a Conventional Commit message (e.g., feat(auth): add JWT validation).
-- Interactive Flow: You are prompted with the generated message: Use this? [Y/n/e to edit].
-  - Y: Uses the generated message instantly.
-  - e: Opens your $EDITOR with the message pre-filled for tweaking.
-  - n: Falls back to standard Git editor behavior.
+Forget staring at a blank terminal trying to summarize your changes.
+* Running `mygit commit` triggers the AI to analyze your staged diff and generate a Conventional Commit message (e.g., `feat(auth): add JWT validation`).
+* **Interactive Flow:** You are prompted with the generated message: `Use this? [Y/n/e to edit]`.
+  * `Y`: Uses the generated message instantly.
+  * `e`: Opens your `$EDITOR` with the message pre-filled for tweaking.
+  * `n`: Falls back to standard Git editor behavior.
 
-### Native Git Integration (libgit2)
-mygit does not shell out to the git CLI executable using brittle popen calls.
-- Direct C API: Uses libgit2 to directly traverse the Git object database, query the index, and calculate tree-to-index diffs purely in memory.
-- RAII Memory Safety: All C-style libgit2 pointers (git_repository, git_diff, git_tree) are wrapped in C++ std::unique_ptr with custom deleters, guaranteeing zero memory leaks.
-
-### Repository-Aware Context (RAG)
-mygit can retrieve semantically related code from the rest of your repository and feed it into the review/commit-message prompts, so the AI sees more than just the raw diff.
-- Zero-RAG fallback by default: until an embedding model is present, `RagOrchestrator::available()` is `false` and every command behaves exactly as it did before — no crashes, no setup required.
-- BPE tokenizer + ONNX Runtime: `rag/bpe_tokenizer.cpp` implements a byte-level BPE tokenizer compatible with HuggingFace `tokenizer.json` files, and `rag/embedder.cpp` runs the actual embedding model through ONNX Runtime (CPU by default, optional CUDA execution provider).
-- FAISS-backed vector store: indexed code units are embedded and searched via FAISS for fast nearest-neighbor retrieval at commit time.
-- See [RAG Setup Guide](#rag-setup-guide) below to turn this on.
+### Native Git Integration (`libgit2`)
+`mygit` does not shell out to the `git` CLI executable using brittle `popen` calls.
+* **Direct C API:** Uses `libgit2` to directly traverse the Git object database, query the index, and calculate tree-to-index diffs purely in memory.
+* **RAII Memory Safety:** All C-style `libgit2` pointers (`git_repository`, `git_diff`, `git_tree`) are wrapped in C++ `std::unique_ptr` with custom deleters, guaranteeing zero memory leaks.
 
 ### SQLite Review Memory System
-Every review verdict is persisted to a local SQLite database (~/.mygit/mygit.db), establishing a long-term memory system.
-- Schema Auto-Creation: CREATE TABLE IF NOT EXISTS ensures zero setup overhead.
-- ACID Transactions: Inserts into the reviews and issues tables are bound by BEGIN and COMMIT block limits to ensure atomicity.
-- Prepared Statements: Parameter-bound queries (sqlite3_bind) prevent SQL injection and ensure blazing fast writes.
-- View History: The mygit history command renders a beautiful, colored ASCII table of your last 10 reviews using the FTXUI library.
+Every review verdict is persisted to a local SQLite database (`~/.mygit/mygit.db`), establishing a long-term memory system.
+* **Schema Auto-Creation:** `CREATE TABLE IF NOT EXISTS` ensures zero setup overhead.
+* **ACID Transactions:** Inserts are bound by `BEGIN` and `COMMIT` block limits to ensure atomicity.
+* **Prepared Statements:** Parameter-bound queries prevent SQL injection and ensure blazing fast writes.
+* **View History:** The `mygit history` command renders a beautiful, colored ASCII table of your last 10 reviews using the `FTXUI` library.
+
+---
 
 ## System Architecture
 
-mygit is built using a highly modular C++20 architecture. Below is a high-level component diagram illustrating how data flows from the CLI to the underlying LLM and Git repository.
+`mygit` is built using a highly modular C++20 architecture. Below is a detailed component diagram illustrating how data flows from the CLI to the underlying LLM and Git repository.
 
 ```mermaid
 graph TD
-    CLI["CLI Router / main.cpp"]
+    classDef git fill:#f9d0c4,stroke:#333,stroke-width:2px;
+    classDef ai fill:#d4e6f1,stroke:#333,stroke-width:2px;
+    classDef core fill:#e8daef,stroke:#333,stroke-width:2px;
+    classDef db fill:#d5f5e3,stroke:#333,stroke-width:2px;
+    classDef ui fill:#fcf3cf,stroke:#333,stroke-width:2px;
+
+    CLI["CLI Router (main.cpp)"]:::core
     
-    subgraph Git Integration
-        LibGit["libgit2 Engine"]
-        GitDiff["git_diff.cpp"]
-        GitStatus["git_status.cpp"]
+    subgraph Git_Integration [Git Integration Layer]
+        LibGit["libgit2 Engine (In-Memory Database Access)"]:::git
+        GitDiff["git_diff.cpp (Diff Calculation)"]:::git
+        GitStatus["git_status.cpp (Index Query)"]:::git
     end
     
-    subgraph AI Engine
-        PromptBuilder["Prompt Builder"]
-        LlamaCPP["llama.cpp Engine"]
-        LlamaClient["LlamaClient Wrappers"]
-        GBNF["GBNF Grammar Constrainer"]
+    subgraph AI_Engine [AI & Inference Engine]
+        PromptBuilder["Prompt Builder (Context Assembly)"]:::ai
+        LlamaCPP["llama.cpp Engine (Local LLM Inference)"]:::ai
+        LlamaClient["LlamaClient (KV Cache Management)"]:::ai
+        GBNF["GBNF Grammar (Sampling Constraint)"]:::ai
     end
     
-    subgraph Core Logic
-        DecisionEngine["Decision Engine"]
-        Parser["JSON Parser"]
+    subgraph Core_Logic [Core Logic & Parsing]
+        DecisionEngine["Decision Engine (Severity Analysis)"]:::core
+        Parser["JSON Parser (nlohmann/json)"]:::core
     end
     
-    subgraph Persistence & UI
-        SQLite[("SQLite Database")]
-        FTXUI["FTXUI Terminal UI"]
+    subgraph Persistence_UI [Persistence & User Interface]
+        SQLite[("SQLite Database (~/.mygit/mygit.db)")]:::db
+        FTXUI["FTXUI Terminal UI (ASCII Rendering)"]:::ui
     end
 
-    CLI -->|"Extracts staged changes"| GitDiff
-    GitDiff --> LibGit
+    CLI -->|"1. Request Staged Changes"| GitDiff
     GitStatus --> LibGit
+    GitDiff -->|"2. Direct Object Access"| LibGit
     
-    GitDiff -->|"Diff String"| PromptBuilder
-    PromptBuilder --> LlamaClient
-    LlamaClient -->|"Constrains sampling"| GBNF
-    LlamaClient --> LlamaCPP
-    LlamaCPP -->|"Returns JSON String"| Parser
+    GitDiff -->|"3. Raw Diff String"| PromptBuilder
+    PromptBuilder -->|"4. Formatted Prompt"| LlamaClient
+    LlamaClient -->|"5. Apply JSON Grammar Constraint"| GBNF
+    LlamaClient -->|"6. Trigger Inference"| LlamaCPP
+    LlamaCPP -->|"7. Return Validated JSON String"| Parser
     
-    Parser -->|"Structured Data"| DecisionEngine
-    DecisionEngine -->|"Verdicts"| SQLite
-    DecisionEngine -->|"Displays Report"| FTXUI
+    Parser -->|"8. Parsed Structured Data"| DecisionEngine
+    DecisionEngine -->|"9. Save Review Data (ACID Transaction)"| SQLite
+    DecisionEngine -->|"10. Render Colored Report"| FTXUI
 ```
 
 ## The Review Workflow
 
-Here is exactly what happens when you run mygit commit:
+Here is a detailed sequence diagram illustrating exactly what happens when you run `mygit commit`:
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant CLI
-    participant LibGit2
-    participant LlamaCPP
-    participant DecisionEngine
-    participant SQLite
+    participant CLI as CLI Router
+    participant LibGit2 as libgit2 Engine
+    participant PromptBuild as Prompt Builder
+    participant LlamaCPP as llama.cpp (GPU/CPU)
+    participant Decision as Decision Engine
+    participant DB as SQLite DB
 
-    User->>CLI: mygit commit
-    CLI->>LibGit2: get_staged_diff()
-    LibGit2-->>CLI: "staged diff string"
-    CLI->>LlamaCPP: "prompt + diff + GBNF grammar"
+    User->>CLI: Run `mygit commit`
+    activate CLI
     
-    Note over LlamaCPP: Local GPU Inference
+    CLI->>LibGit2: Query Index & Get Staged Diff
+    activate LibGit2
+    LibGit2-->>CLI: Return Staged Diff String
+    deactivate LibGit2
     
-    LlamaCPP-->>CLI: "safe: true, issues: []"
-    CLI->>DecisionEngine: "evaluate(json)"
+    CLI->>PromptBuild: Construct Prompt with Diff
+    activate PromptBuild
+    PromptBuild-->>CLI: Final Prompt
+    deactivate PromptBuild
     
-    DecisionEngine->>SQLite: "save_review()"
+    CLI->>LlamaCPP: Inference Request (Prompt + GBNF JSON Schema)
+    activate LlamaCPP
+    Note right of LlamaCPP: Constrained Sampling prevents hallucinations
+    LlamaCPP-->>CLI: Return Strictly Formatted JSON (e.g., {"safe": true, "issues": []})
+    deactivate LlamaCPP
     
-    alt is safe (no critical issues)
-        DecisionEngine-->>CLI: PASS
-        CLI->>LlamaCPP: "generate_commit_message(diff)"
-        LlamaCPP-->>CLI: "feat: add hello world logging"
-        CLI->>User: "Use this message? [Y/n/e]"
-        User-->>CLI: Y
-        CLI->>LibGit2: execute git commit
-        CLI-->>User: Success!
-    else is critical
-        DecisionEngine-->>CLI: FAIL (Blocked)
-        CLI-->>User: Commit Aborted. Use --force-ai to override.
+    CLI->>Decision: Evaluate JSON Structured Output
+    activate Decision
+    Decision->>DB: Persist Verdict & Issues (BEGIN/COMMIT)
+    activate DB
+    DB-->>Decision: Write Acknowledged
+    deactivate DB
+
+    alt is safe (No Critical Issues)
+        Decision-->>CLI: Return PASS Status
+        CLI->>LlamaCPP: Request Commit Message Generation based on Diff
+        activate LlamaCPP
+        LlamaCPP-->>CLI: Return Conventional Commit Message (e.g., "feat: add user auth")
+        deactivate LlamaCPP
+
+        CLI->>User: Prompt: "Use this message? [Y/n/e]"
+        User-->>CLI: Responds 'Y'
+
+        CLI->>LibGit2: Execute Native git_commit
+        CLI-->>User: Display Success Confirmation!
+    else is critical (Critical Issues Found)
+        Decision-->>CLI: Return FAIL Status (Blocked)
+        deactivate Decision
+        CLI-->>User: Display Abort Message: "Commit Aborted. Use --force-ai to override."
     end
+    deactivate CLI
 ```
+
+---
+
+## The Roadmap: Advanced Features & Optimizations
+
+We are moving from a **CLI Tool** to a true **AI Daemon**. Here is what is on the horizon:
+
+### 1. Repository-Aware Context (RAG)
+Currently, the AI operates on raw diffs. We are implementing a lightweight RAG pipeline to generate repository-aware context.
+* **Multi-Language Tree-sitter Grammars:** AST-level symbol extraction for C++, Python, JS/TS, Go, Rust, etc.
+* **Universal Text-Chunking:** Fallback for unrecognized file types.
+* **FAISS Vector Store:** Indexed code units embedded locally (e.g., via Qodo Embed 1.5B with ONNX).
+
+### 2. Rename-Aware Change Detection
+File renames currently look like deletions and additions, bloating the context window.
+* **libgit2 Rename Detection:** (`git_diff_find_similar()`) will identify pure file relocations, excluding unchanged contents from the analysis prompt.
+
+### 3. Pipeline Acceleration
+* **Prefix KV Caching:** Cache the system prompt and GBNF grammar state to eliminate repeated evaluation latency.
+* **Batched Per-File Processing:** Split large multi-file diffs into independent batches for parallel CUDA review, then aggregate.
+* **Daemonized Architecture:** Eliminate the cold-start penalty by spawning a lightweight background process that holds the model in VRAM persistently.
+
+### 4. Smart Diff Acceptance
+Preventing the model from analyzing excessive diffs or binary/non-text files (like large documentation or `.md` files) to save computation.
+
+### 5. The "Agentic" Shift (V4/V5)
+* **Patch Generation & Safe Auto-Fix:** `mygit` will generate Git-compatible unified patches for detected problems, allowing one-command fixes upon user approval.
+
+---
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
 | `mygit setup` | Interactive prompt to configure your model path and GPU layer count. |
-| `mygit install` | Self-installs the executable to ~/.mygit/bin and updates your system PATH. |
+| `mygit install` | Self-installs the executable to `~/.mygit/bin` and updates your system PATH. |
 | `mygit review` | Analyzes staged changes and prints a colored report to the terminal. |
 | `mygit commit` | Runs a review. If it passes, generates a commit message, and commits. |
 | `mygit commit -m "msg"` | Runs a review. If it passes, commits using your provided message. |
@@ -161,109 +224,77 @@ sequenceDiagram
 
 > **Override Flag:** Append `--force-ai` to `commit` or `push` to bypass blocking issues.
 
+---
+
 ## Prerequisites & Setup
 
 1. **Compiler:** C++20 compatible compiler (MSVC 19.3+, GCC 13+, Clang 17+)
 2. **Build System:** CMake 3.21+ & Ninja
-3. **Package Manager:** vcpkg installed and bootstrapped.
+3. **Package Manager:** vcpkg installed and bootstrapped (Optional, standard dev headers work too).
 
 ### Building from Source
 
-```powershell
+```bash
 git clone <this repo>
 cd AI_code_reviewer_git
 
-# Configure CMake (vcpkg will automatically fetch libgit2, llama.cpp, SQLite, FTXUI, etc.)
-cmake --preset default
+# Configure CMake
+cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
 
 # Build the executable
-cmake --build build/default
+cmake --build build
 ```
 
 ### Configuration & Models
 
-You must provide mygit with a compatible .gguf model. (We recommend Qwen2.5-Coder-1.5B-Instruct for lightning-fast, high-quality local reviews).
+You must provide `mygit` with a compatible `.gguf` model. (We recommend Qwen2.5-Coder-1.5B-Instruct for lightning-fast, high-quality local reviews).
 
-Run the setup command to configure the model path and GPU layers (use 99 to offload the entire model to the GPU for maximum speed):
+Run the setup command to configure the model path and GPU layers (use `99` to offload the entire model to the GPU for maximum speed):
 
-```powershell
-.\build\default\mygit.exe setup
+```bash
+./build/mygit setup
 ```
 
-Once configured, install mygit to your system PATH:
+Once configured, install `mygit` to your system PATH:
 
-```powershell
-.\build\default\mygit.exe install
+```bash
+./build/mygit install
 ```
 
-Restart your terminal, and you can now run mygit from anywhere!
+Restart your terminal, and you can now run `mygit` from anywhere!
 
-## RAG Setup Guide
+---
 
-By default, mygit runs in **zero-RAG fallback mode**: `rag/embedder.cpp` looks for `models/embedding_model.onnx` and `models/tokenizer.json` at startup, and if either is missing it logs a one-line warning and every command behaves exactly as it did without RAG. Nothing else changes and nothing crashes. This section walks through turning real retrieval on, and (optionally) accelerating it with your GPU.
+## RAG Setup Guide (Optional)
 
-### Step 1 — Get a real embedding model (required for RAG)
+By default, `mygit` runs in **zero-RAG fallback mode**. If `models/embedding_model.onnx` and `models/tokenizer.json` are missing, it falls back gracefully. To enable real retrieval:
 
-`RagOrchestrator::available()` flips to `true` automatically once both files below exist — indexing kicks in on the next `mygit commit`, and retrieved context starts showing up in commit-message/review prompts. **No rebuild is needed for this step** — the paths are read at runtime.
+### Step 1: Get an embedding model
+Download an embedding model (e.g., Qodo-Embed-1-1.5B) and export it to ONNX format using the provided scripts.
+```bash
+git lfs install
+git clone https://huggingface.co/Qodo/Qodo-Embed-1-1.5B model_customization/Qodo-Embed-1-1.5B
+python -m venv model_customization/venv
+model_customization/venv/bin/pip install torch transformers onnx onnxruntime
+model_customization/venv/bin/python scripts/export_embedding_model_onnx.py
+```
+This produces the necessary `.onnx` and `tokenizer.json` files in the `models/` directory. `mygit` will automatically detect them on the next run.
 
-1. Download an embedding model checkpoint from HuggingFace. This has been tested against [Qodo-Embed-1-1.5B](https://huggingface.co/Qodo/Qodo-Embed-1-1.5B) (a Qwen2.5-Coder-based embedder); `Qwen2.5-Coder-1.5B-Embed`-style models should also work as long as they're a standard encoder (non-causal) model loadable via `AutoModel`/`AutoTokenizer`.
-
-   ```powershell
-   # from the repo root
-   git lfs install
-   git clone https://huggingface.co/Qodo/Qodo-Embed-1-1.5B model_customization/Qodo-Embed-1-1.5B
-   ```
-
-2. Set up a Python environment with the export dependencies (PyTorch, transformers, ONNX, ONNX Runtime):
-
-   ```powershell
-   python -m venv model_customization/venv
-   model_customization\venv\Scripts\pip install torch transformers onnx onnxruntime
-   ```
-
-3. Run the export script. It traces the HuggingFace model straight to ONNX and copies the tokenizer alongside it:
-
-   ```powershell
-   model_customization\venv\Scripts\python scripts\export_embedding_model_onnx.py
-   ```
-
-   This produces `models/embedding_model.onnx` (plus, for larger models, a set of sidecar weight files next to it — ONNX's external-data format for models over ~2GB; keep the whole `models/` directory together, don't move just the `.onnx` file) and `models/tokenizer.json`.
-
-4. That's it — run `mygit commit` as usual. If you want to confirm it's working, watch stderr for the absence of any `[rag] ...falling back...` warning.
-
-> **Model-specific export notes:** if you use a different HF checkpoint with custom `trust_remote_code` modeling code, you may need to tweak `scripts/export_embedding_model_onnx.py` — in particular `model.config.use_cache = False` and `attn_implementation="eager"` were needed to work around a newer-`transformers`-vs-older-modeling-code incompatibility and an SDPA tracing bug respectively. The export script's `torch.onnx.export` call expects the model to expose a standard `last_hidden_state` (or single-tensor) output; `rag/embedder.cpp` resolves input/output tensor names from the ONNX graph itself, so it isn't hardcoded to one model's export conventions.
-
-### Step 2 — GPU-accelerated embeddings (optional)
-
-Only worth doing once you have a real model to embed (Step 1). Without this, embeddings run on CPU — fully functional, just slower on large repos.
-
-**cuDNN**: install it manually from [developer.nvidia.com/cudnn](https://developer.nvidia.com/cudnn) (free NVIDIA account, small download — this step is gated behind login and can't be automated). Extract it so `cudnn.h`/`cudnn64_*.dll`/`cudnn.lib` land inside your existing CUDA Toolkit install tree (e.g. `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.x\`).
-
-**Rebuild onnxruntime with CUDA.** vcpkg builds ONNX Runtime from source when the `onnx-cuda` feature is requested, and getting a clean build depends heavily on your exact CUDA/MSVC toolchain versions. This repo ships a **vcpkg overlay port** at [vcpkg-overlays/onnxruntime/](vcpkg-overlays/onnxruntime/) with fixes discovered while building against CUDA 13.3 + a pre-release MSVC toolset — read its `portfile.cmake` comments if you hit a build error, since your exact combination of CUDA/MSVC/onnxruntime versions may need different (or no) patches:
-
-- Pins `CMAKE_CUDA_ARCHITECTURES` to your GPU's actual compute capability instead of onnxruntime's default multi-arch list (which includes architectures CUDA 13+ dropped support for). **Edit `86-real` in `vcpkg-overlays/onnxruntime/portfile.cmake` to match your GPU** — check yours with `nvidia-smi --query-gpu=name,compute_cap --format=csv`.
-- Adds `/Zc:preprocessor` (CUDA 13's CCCL headers require MSVC's conforming preprocessor).
-- Defines `__NV_NO_VECTOR_DEPRECATION_DIAG` (CUDA 13 soft-deprecated some vector types onnxruntime 1.23.2 still uses; this is NVIDIA's own official suppression for it).
-- Sets `onnxruntime_DISABLE_CONTRIB_OPS=ON` — mygit's embedder only ever uses standard ONNX ops (verify with `onnx.load(...).graph.node` on your exported model if you're unsure), so this skips onnxruntime's LLM-serving-specific contrib ops (flash-attention, MoE, etc.) entirely, at zero functional cost. It also happens to route around a couple of build breaks in that code specific to bleeding-edge toolchains.
-- A small source patch (`fix-concat-link.patch`) adding an `extern template` to one onnxruntime header, working around an optimizer bug in newer/preview MSVC toolsets that discards an explicit template instantiation as "unreferenced."
-
-To build:
-
-```powershell
-# From a "Developer PowerShell for VS 2022" (or run vcvarsall.bat x64 first) -
-# a plain shell may be missing Windows SDK lib paths (winhttp.lib etc).
-
-$env:VCPKG_OVERLAY_PORTS = "<repo>\vcpkg-overlays"
-
-# VCPKG_INSTALLED_DIR redirects vcpkg's install/buildtree root to a short path
-# (e.g. E:\vi) - onnxruntime ships some very long checked-in filenames that
-# combined with vcpkg's normal deep build path can exceed Windows' 260-char
-# MAX_PATH limit. Skip this flag if your repo is already at a short path.
-cmake --preset default -DVCPKG_MANIFEST_FEATURES=onnx-cuda -DMYGIT_ENABLE_ONNX_CUDA=ON -DVCPKG_INSTALLED_DIR=E:/vi
-
-cmake --build build/default --target mygit
+### Step 2: GPU-accelerated embeddings (optional)
+For GPU acceleration, install cuDNN manually and rebuild `onnxruntime` with CUDA using the provided vcpkg overlays.
+```bash
+export VCPKG_OVERLAY_PORTS="<repo>/vcpkg-overlays"
+cmake -B build -S . -DVCPKG_MANIFEST_FEATURES=onnx-cuda -DMYGIT_ENABLE_ONNX_CUDA=ON
+cmake --build build --target mygit
 ```
 
-This is a long rebuild the first time — vcpkg's `onnxruntime[cuda]` feature compiles onnxruntime from source. `rag/embedder.cpp` requests the CUDA execution provider under `#ifdef MYGIT_ONNXRUNTIME_CUDA` and silently falls back to CPU if CUDA session creation fails for any reason, so a partially-working GPU setup degrades gracefully rather than crashing.
+---
 
-**Memory note:** onnxruntime's flash-attention/CUTLASS kernels (already skipped above via `onnxruntime_DISABLE_CONTRIB_OPS`) are extremely RAM-hungry per translation unit and can OOM-crash a parallel build on machines with ~16GB RAM or less. If you re-enable contrib ops for some reason and hit that, reduce build parallelism or add more RAM before increasing `-j`.
+## How Codex & GPT-5.6 Were Used
+
+This project was built with OpenAI Codex (powered by GPT-5.6) as the primary development partner, using a spec-first workflow:
+
+* **Spec-first feature development:** Every major module began as a written prompt spec handed to Codex. The actual working prompt library is checked into this repo at `docs/prompts.md`.
+* **Module scaffolding and iteration:** Codex generated first implementations of the subsystems, which were then reviewed, tightened, and integrated by hand. The architecture and its constraints live in `docs/architecture_review.md`.
+* **Toolchain debugging:** GPT-5.6 was used heavily to diagnose build failures (documented in `vcpkg-overlays/onnxruntime/`).
+* **The dogfooding loop:** AI-written code did not get a free pass: every commit produced with Codex was reviewed by `mygit` itself before it was allowed into the repo. AI wrote the code, and an AI gatekeeper judged it.
