@@ -55,6 +55,12 @@ mygit can retrieve semantically related code from the rest of your repository an
 - FAISS-backed vector store: indexed code units are embedded and searched via FAISS for fast nearest-neighbor retrieval at commit time.
 - See [RAG Setup Guide](#rag-setup-guide) below to turn this on.
 
+### Daemon Architecture
+Background HTTP daemon keeps the model loaded in VRAM persistently.
+- The CLI sends lightweight HTTP requests to the daemon for inference.
+- Zero cold-start penalty for consecutive reviews or commits.
+- Auto-shutdown after 15 minutes of idle time.
+
 ### SQLite Review Memory System
 Every review verdict is persisted to a local SQLite database (~/.mygit/mygit.db), establishing a long-term memory system.
 - Schema Auto-Creation: CREATE TABLE IF NOT EXISTS ensures zero setup overhead.
@@ -76,11 +82,16 @@ graph TD
         GitStatus["git_status.cpp"]
     end
     
-    subgraph AI Engine
+    subgraph AI Client
         PromptBuilder["Prompt Builder"]
-        LlamaCPP["llama.cpp Engine"]
+        DClient["Daemon Client"]
+    end
+
+    subgraph Daemon Process (Background)
+        DServer["Daemon Server (HTTP)"]
         LlamaClient["LlamaClient Wrappers"]
         GBNF["GBNF Grammar Constrainer"]
+        LlamaCPP["llama.cpp Engine"]
     end
     
     subgraph Core Logic
@@ -98,10 +109,15 @@ graph TD
     GitStatus --> LibGit
     
     GitDiff -->|"Diff String"| PromptBuilder
-    PromptBuilder --> LlamaClient
+    PromptBuilder -->|"Prompt String"| CLI
+    CLI -->|"HTTP Request"| DClient
+    DClient --> DServer
+    DServer --> LlamaClient
     LlamaClient -->|"Constrains sampling"| GBNF
     LlamaClient --> LlamaCPP
-    LlamaCPP -->|"Returns JSON String"| Parser
+    LlamaCPP -->|"JSON String"| DServer
+    DServer -->|"JSON String"| DClient
+    DClient -->|"JSON String"| Parser
     
     Parser -->|"Structured Data"| DecisionEngine
     DecisionEngine -->|"Verdicts"| SQLite
@@ -117,6 +133,8 @@ sequenceDiagram
     participant User
     participant CLI
     participant LibGit2
+    participant DaemonClient
+    participant DaemonServer
     participant LlamaCPP
     participant DecisionEngine
     participant SQLite
@@ -124,19 +142,27 @@ sequenceDiagram
     User->>CLI: mygit commit
     CLI->>LibGit2: get_staged_diff()
     LibGit2-->>CLI: "staged diff string"
-    CLI->>LlamaCPP: "prompt + diff + GBNF grammar"
+    CLI->>DaemonClient: "prompt + diff + GBNF grammar"
+    DaemonClient->>DaemonServer: POST /review
+    DaemonServer->>LlamaCPP: inference
     
     Note over LlamaCPP: Local GPU Inference
     
-    LlamaCPP-->>CLI: "safe: true, issues: []"
+    LlamaCPP-->>DaemonServer: "safe: true, issues: []"
+    DaemonServer-->>DaemonClient: 200 OK + JSON body
+    DaemonClient-->>CLI: JSON String
     CLI->>DecisionEngine: "evaluate(json)"
     
     DecisionEngine->>SQLite: "save_review()"
     
     alt is safe (no critical issues)
         DecisionEngine-->>CLI: PASS
-        CLI->>LlamaCPP: "generate_commit_message(diff)"
-        LlamaCPP-->>CLI: "feat: add hello world logging"
+        CLI->>DaemonClient: "generate_commit_message(diff)"
+        DaemonClient->>DaemonServer: POST /commit
+        DaemonServer->>LlamaCPP: inference
+        LlamaCPP-->>DaemonServer: "feat: add hello world logging"
+        DaemonServer-->>DaemonClient: 200 OK + text
+        DaemonClient-->>CLI: "feat: add hello world logging"
         CLI->>User: "Use this message? [Y/n/e]"
         User-->>CLI: Y
         CLI->>LibGit2: execute git commit

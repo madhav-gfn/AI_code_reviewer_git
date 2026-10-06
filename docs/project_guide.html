@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mygit — Complete Project Guide</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #111827;
+            --bg-card: rgba(17, 24, 39, 0.7);
+            --bg-glass: rgba(255, 255, 255, 0.03);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --text-primary: #f0f4f8;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #8b5cf6;
+            --accent-pink: #ec4899;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --glow-blue: rgba(59, 130, 246, 0.15);
+            --glow-purple: rgba(139, 92, 246, 0.15);
+            --glow-cyan: rgba(6, 182, 212, 0.1);
+            --gradient-1: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            --gradient-2: linear-gradient(135deg, #06b6d4, #3b82f6);
+            --gradient-3: linear-gradient(135deg, #8b5cf6, #ec4899);
+            --gradient-4: linear-gradient(135deg, #10b981, #06b6d4);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* ─── Animated Background ─── */
+        .bg-grid {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image:
+                linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            z-index: -2;
+        }
+        .bg-glow-1 {
+            position: fixed; top: -200px; right: -200px;
+            width: 600px; height: 600px; border-radius: 50%;
+            background: radial-gradient(circle, var(--glow-purple) 0%, transparent 70%);
+            z-index: -1; animation: floatGlow 12s ease-in-out infinite;
+        }
+        .bg-glow-2 {
+            position: fixed; bottom: -200px; left: -200px;
+            width: 500px; height: 500px; border-radius: 50%;
+            background: radial-gradient(circle, var(--glow-cyan) 0%, transparent 70%);
+            z-index: -1; animation: floatGlow 15s ease-in-out infinite reverse;
+        }
+        @keyframes floatGlow {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(40px, 30px) scale(1.1); }
+        }
+
+        /* ─── Sidebar Navigation ─── */
+        .sidebar {
+            position: fixed; top: 0; left: 0; width: 280px; height: 100vh;
+            background: rgba(10, 14, 23, 0.95);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border-glass);
+            padding: 24px 0;
+            z-index: 100;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+        }
+        .sidebar-logo {
+            padding: 0 24px 24px;
+            border-bottom: 1px solid var(--border-glass);
+            margin-bottom: 16px;
+        }
+        .sidebar-logo h2 {
+            font-size: 22px; font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+        .sidebar-logo span {
+            font-size: 11px; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 2px;
+            display: block; margin-top: 4px;
+        }
+        .nav-section {
+            padding: 8px 16px 4px;
+            font-size: 10px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 2px;
+            color: var(--text-muted);
+        }
+        .nav-link {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 24px;
+            color: var(--text-secondary);
+            text-decoration: none; font-size: 13px; font-weight: 500;
+            transition: all 0.2s;
+            border-left: 2px solid transparent;
+        }
+        .nav-link:hover {
+            color: var(--text-primary);
+            background: var(--bg-glass);
+            border-left-color: var(--accent-blue);
+        }
+        .nav-link .icon { font-size: 16px; width: 20px; text-align: center; }
+
+        /* ─── Main Content ─── */
+        .main { margin-left: 280px; padding: 0; }
+
+        /* ─── Hero Section ─── */
+        .hero {
+            position: relative;
+            padding: 100px 60px 80px;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(180deg, rgba(59, 130, 246, 0.05) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 6px 16px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 100px;
+            font-size: 12px; font-weight: 600; color: var(--accent-blue);
+            margin-bottom: 24px;
+        }
+        .hero-badge .dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--accent-green);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.3); }
+        }
+        .hero h1 {
+            font-size: 52px; font-weight: 900;
+            line-height: 1.1; letter-spacing: -2px;
+            margin-bottom: 20px;
+        }
+        .hero h1 .gradient {
+            background: var(--gradient-1);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .hero p {
+            font-size: 18px; color: var(--text-secondary);
+            max-width: 700px; line-height: 1.8;
+        }
+        .hero-stats {
+            display: flex; gap: 40px; margin-top: 40px;
+        }
+        .hero-stat {
+            text-align: center;
+        }
+        .hero-stat .number {
+            font-size: 36px; font-weight: 800;
+            background: var(--gradient-2);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .hero-stat .label {
+            font-size: 12px; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 1.5px;
+            margin-top: 4px;
+        }
+
+        /* ─── Sections ─── */
+        .section {
+            padding: 60px;
+            border-top: 1px solid var(--border-glass);
+        }
+        .section-header {
+            margin-bottom: 40px;
+        }
+        .section-tag {
+            font-size: 11px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 3px;
+            color: var(--accent-blue);
+            margin-bottom: 8px;
+        }
+        .section-title {
+            font-size: 32px; font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 12px;
+        }
+        .section-desc {
+            font-size: 15px; color: var(--text-secondary);
+            max-width: 600px;
+        }
+
+        /* ─── Cards ─── */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: 32px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            border-color: rgba(59, 130, 246, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* ─── Feature Grid ─── */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 20px;
+        }
+        .feature-card .icon-box {
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+            margin-bottom: 20px;
+        }
+        .feature-card h3 {
+            font-size: 17px; font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .feature-card p {
+            font-size: 14px; color: var(--text-secondary);
+            line-height: 1.7;
+        }
+        .feature-card .tech-tag {
+            display: inline-block;
+            padding: 3px 10px; margin-top: 12px; margin-right: 6px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 6px;
+            font-size: 11px; font-weight: 600; color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Architecture Diagram ─── */
+        .diagram-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: 40px;
+            margin: 30px 0;
+            overflow-x: auto;
+        }
+        .mermaid {
+            display: flex; justify-content: center;
+        }
+        .mermaid svg { max-width: 100%; }
+
+        /* ─── File Tree ─── */
+        .file-tree {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: 24px 32px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 2;
+            overflow-x: auto;
+            white-space: pre;
+        }
+        .file-tree .folder { color: var(--accent-blue); font-weight: 600; }
+        .file-tree .file { color: var(--text-secondary); }
+        .file-tree .highlight { color: var(--accent-cyan); font-weight: 500; }
+        .file-tree .comment { color: var(--text-muted); font-style: italic; }
+
+        /* ─── Table ─── */
+        .styled-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .styled-table th {
+            background: rgba(59, 130, 246, 0.08);
+            padding: 14px 20px;
+            text-align: left;
+            font-size: 12px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1.5px;
+            color: var(--accent-blue);
+            border-bottom: 1px solid var(--border-glass);
+        }
+        .styled-table td {
+            padding: 14px 20px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border-glass);
+            color: var(--text-secondary);
+        }
+        .styled-table tr:last-child td { border-bottom: none; }
+        .styled-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .styled-table code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.08);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* ─── Collapsible / Accordion ─── */
+        .accordion { margin: 20px 0; }
+        .accordion-item {
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            overflow: hidden;
+            background: var(--bg-card);
+        }
+        .accordion-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px 24px;
+            cursor: pointer;
+            font-size: 15px; font-weight: 600;
+            color: var(--text-primary);
+            transition: background 0.2s;
+            user-select: none;
+        }
+        .accordion-header:hover { background: rgba(255,255,255,0.02); }
+        .accordion-header .arrow {
+            font-size: 12px; color: var(--text-muted);
+            transition: transform 0.3s;
+        }
+        .accordion-item.active .accordion-header .arrow { transform: rotate(180deg); }
+        .accordion-body {
+            max-height: 0; overflow: hidden;
+            transition: max-height 0.4s ease;
+            padding: 0 24px;
+        }
+        .accordion-item.active .accordion-body {
+            max-height: 2000px;
+            padding: 0 24px 24px;
+        }
+        .accordion-body p, .accordion-body ul {
+            font-size: 14px; color: var(--text-secondary);
+            line-height: 1.8;
+        }
+        .accordion-body ul { padding-left: 20px; }
+        .accordion-body li { margin-bottom: 6px; }
+
+        /* ─── Code Blocks ─── */
+        pre.code-block {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 20px 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            overflow-x: auto;
+            margin: 16px 0;
+        }
+        pre.code-block .keyword { color: var(--accent-purple); font-weight: 600; }
+        pre.code-block .type { color: var(--accent-cyan); }
+        pre.code-block .string { color: var(--accent-green); }
+        pre.code-block .comment { color: var(--text-muted); font-style: italic; }
+        pre.code-block .func { color: var(--accent-orange); }
+
+        /* ─── Badge / Tag ─── */
+        .badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 12px; border-radius: 6px;
+            font-size: 11px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .badge-blue { background: rgba(59, 130, 246, 0.12); color: var(--accent-blue); border: 1px solid rgba(59, 130, 246, 0.2); }
+        .badge-green { background: rgba(16, 185, 129, 0.12); color: var(--accent-green); border: 1px solid rgba(16, 185, 129, 0.2); }
+        .badge-purple { background: rgba(139, 92, 246, 0.12); color: var(--accent-purple); border: 1px solid rgba(139, 92, 246, 0.2); }
+        .badge-orange { background: rgba(245, 158, 11, 0.12); color: var(--accent-orange); border: 1px solid rgba(245, 158, 11, 0.2); }
+        .badge-red { background: rgba(239, 68, 68, 0.12); color: var(--accent-red); border: 1px solid rgba(239, 68, 68, 0.2); }
+        .badge-cyan { background: rgba(6, 182, 212, 0.12); color: var(--accent-cyan); border: 1px solid rgba(6, 182, 212, 0.2); }
+        .badge-pink { background: rgba(236, 72, 153, 0.12); color: var(--accent-pink); border: 1px solid rgba(236, 72, 153, 0.2); }
+
+        /* ─── Timeline ─── */
+        .timeline { position: relative; padding-left: 40px; margin: 30px 0; }
+        .timeline::before {
+            content: ''; position: absolute; left: 14px; top: 0; bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, var(--accent-blue), var(--accent-purple), var(--accent-cyan));
+        }
+        .timeline-item { position: relative; margin-bottom: 32px; }
+        .timeline-item::before {
+            content: ''; position: absolute; left: -33px; top: 6px;
+            width: 12px; height: 12px; border-radius: 50%;
+            background: var(--accent-blue);
+            border: 3px solid var(--bg-primary);
+        }
+        .timeline-item h4 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+        .timeline-item p { font-size: 13px; color: var(--text-secondary); }
+
+        /* ─── Dependency Stack ─── */
+        .dep-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .dep-item {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .dep-item:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            background: rgba(59, 130, 246, 0.05);
+        }
+        .dep-item .name {
+            font-size: 14px; font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .dep-item .desc {
+            font-size: 11px; color: var(--text-muted);
+        }
+
+        /* ─── Scroll Animations ─── */
+        .fade-in {
+            opacity: 0; transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+        /* ─── Decision Card ─── */
+        .decision-card {
+            display: grid; grid-template-columns: auto 1fr;
+            gap: 20px;
+            padding: 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 14px;
+            margin-bottom: 16px;
+        }
+        .decision-card .number-circle {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; font-weight: 800;
+            color: white;
+        }
+        .decision-card h4 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+        .decision-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
+
+        /* ─── Responsive ─── */
+        .mobile-toggle {
+            display: none; position: fixed; top: 16px; left: 16px;
+            z-index: 200; width: 40px; height: 40px;
+            background: var(--bg-secondary); border: 1px solid var(--border-glass);
+            border-radius: 10px; cursor: pointer;
+            color: var(--text-primary); font-size: 18px;
+            align-items: center; justify-content: center;
+        }
+        @media (max-width: 900px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main { margin-left: 0; }
+            .mobile-toggle { display: flex; }
+            .hero { padding: 80px 24px 60px; }
+            .hero h1 { font-size: 32px; }
+            .section { padding: 40px 24px; }
+            .feature-grid { grid-template-columns: 1fr; }
+            .hero-stats { flex-wrap: wrap; gap: 20px; }
+        }
+
+        /* ─── Module detail list ─── */
+        .module-list { list-style: none; }
+        .module-list li {
+            padding: 12px 16px;
+            border-left: 3px solid var(--accent-blue);
+            margin-bottom: 8px;
+            background: rgba(59, 130, 246, 0.04);
+            border-radius: 0 8px 8px 0;
+            font-size: 14px;
+        }
+        .module-list li strong { color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+        .module-list li span { color: var(--text-secondary); }
+
+        /* ─── Flow cards ─── */
+        .flow-steps {
+            display: flex; gap: 12px; flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        .flow-step {
+            flex: 1; min-width: 160px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+        .flow-step::after {
+            content: '→'; position: absolute; right: -18px; top: 50%;
+            transform: translateY(-50%);
+            font-size: 18px; color: var(--accent-blue);
+        }
+        .flow-step:last-child::after { display: none; }
+        .flow-step .step-num {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 50%;
+            font-size: 13px; font-weight: 800; color: white;
+            margin-bottom: 10px;
+        }
+        .flow-step h5 { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+        .flow-step p { font-size: 11px; color: var(--text-muted); }
+
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow-1"></div>
+    <div class="bg-glow-2"></div>
+
+    <!-- Mobile Toggle -->
+    <button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+
+    <!-- ═══════════════ SIDEBAR ═══════════════ -->
+    <nav class="sidebar">
+        <div class="sidebar-logo">
+            <h2>⚡ mygit</h2>
+            <span>Project Guide v1.0</span>
+        </div>
+
+        <div class="nav-section">Overview</div>
+        <a class="nav-link" href="#hero"><span class="icon">🏠</span> Introduction</a>
+        <a class="nav-link" href="#what-is"><span class="icon">📋</span> What is mygit?</a>
+        <a class="nav-link" href="#features"><span class="icon">✨</span> Key Features</a>
+        <a class="nav-link" href="#tech-stack"><span class="icon">🔧</span> Tech Stack</a>
+
+        <div class="nav-section">Architecture</div>
+        <a class="nav-link" href="#architecture"><span class="icon">🏗️</span> System Architecture</a>
+        <a class="nav-link" href="#data-flow"><span class="icon">🔄</span> Data Flow</a>
+        <a class="nav-link" href="#project-structure"><span class="icon">📁</span> Project Structure</a>
+        <a class="nav-link" href="#modules"><span class="icon">📦</span> Module Deep Dive</a>
+
+        <div class="nav-section">Design</div>
+        <a class="nav-link" href="#decisions"><span class="icon">💡</span> Design Decisions</a>
+        <a class="nav-link" href="#patterns"><span class="icon">🎯</span> Design Patterns</a>
+        <a class="nav-link" href="#safety"><span class="icon">🛡️</span> Safety & Privacy</a>
+
+        <div class="nav-section">Workflows</div>
+        <a class="nav-link" href="#review-flow"><span class="icon">🔍</span> Review Workflow</a>
+        <a class="nav-link" href="#commit-flow"><span class="icon">💾</span> Commit Workflow</a>
+        <a class="nav-link" href="#rag-flow"><span class="icon">🧠</span> RAG Pipeline</a>
+        <a class="nav-link" href="#daemon-flow"><span class="icon">👻</span> Daemon System</a>
+
+        <div class="nav-section">Reference</div>
+        <a class="nav-link" href="#commands"><span class="icon">⌨️</span> CLI Commands</a>
+        <a class="nav-link" href="#build"><span class="icon">🔨</span> Build & Setup</a>
+        <a class="nav-link" href="#roadmap"><span class="icon">🚀</span> Roadmap</a>
+    </nav>
+
+    <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+    <main class="main">
+
+        <!-- ────── HERO ────── -->
+        <section class="hero" id="hero">
+            <div class="hero-badge">
+                <span class="dot"></span>
+                C++20 · Local AI · Zero Cloud Dependencies
+            </div>
+            <h1>
+                <span class="gradient">mygit</span><br>
+                The AI‑Powered<br>
+                Code Reviewer
+            </h1>
+            <p>
+                A blazingly fast C++20 CLI wrapper around Git that enforces local LLM‑powered code review
+                before every commit or push. Total code privacy. Zero network latency.
+                Grammar‑constrained AI outputs that <em>never</em> fail to parse.
+            </p>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <div class="number">40+</div>
+                    <div class="label">Source Files</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="number">12</div>
+                    <div class="label">Modules</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="number">8</div>
+                    <div class="label">CLI Commands</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="number">12</div>
+                    <div class="label">Dependencies</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="number">7</div>
+                    <div class="label">Languages Parsed</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ────── WHAT IS MYGIT ────── -->
+        <section class="section fade-in" id="what-is">
+            <div class="section-header">
+                <div class="section-tag">Overview</div>
+                <h2 class="section-title">What is mygit?</h2>
+            </div>
+            <div class="two-col">
+                <div class="card">
+                    <h3 style="margin-bottom:16px;">🎯 The Problem</h3>
+                    <p style="font-size:14px; color:var(--text-secondary); line-height:1.8;">
+                        Code reviews are essential but often delayed. Cloud-based AI reviewers raise privacy concerns and
+                        depend on API keys, network access, and monthly subscriptions. Shell-based git integrations are brittle.
+                        LLM outputs are notoriously unreliable — random markdown, trailing commas, hallucinated JSON.
+                    </p>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom:16px;">✅ The Solution</h3>
+                    <p style="font-size:14px; color:var(--text-secondary); line-height:1.8;">
+                        <strong>mygit</strong> runs a local GGUF language model via <code>llama.cpp</code>, interfaces with Git
+                        natively through <code>libgit2</code> (no shell commands), and uses <strong>GBNF grammars</strong>
+                        at the sampling layer to mathematically force the model to output valid JSON. Zero parsing errors. Ever.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ────── KEY FEATURES ────── -->
+        <section class="section fade-in" id="features">
+            <div class="section-header">
+                <div class="section-tag">Features</div>
+                <h2 class="section-title">Key Features & Innovations</h2>
+                <p class="section-desc">Every feature is designed for speed, privacy, and reliability.</p>
+            </div>
+            <div class="feature-grid">
+                <div class="card feature-card">
+                    <div class="icon-box" style="background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(236,72,153,0.15));">🧠</div>
+                    <h3>Local AI Inference</h3>
+                    <p>Runs .gguf models entirely on your hardware via llama.cpp. Seamlessly offloads to GPU (CUDA/Vulkan) or falls back to optimized CPU. No cloud, no API keys, no network calls.</p>
+                    <span class="tech-tag">llama.cpp</span>
+                    <span class="tech-tag">GGUF</span>
+                    <span class="tech-tag">CUDA</span>
+                </div>
+                <div class="card feature-card">
+                    <div class="icon-box" style="background: linear-gradient(135deg, rgba(6,182,212,0.15), rgba(59,130,246,0.15));">📐</div>
+                    <h3>Grammar-Constrained JSON (GBNF)</h3>
+                    <p>Uses GGML BNF grammars at the sampling layer to mathematically guarantee the model outputs valid JSON. Zero parsing errors — the model is physically incapable of generating malformed output.</p>
+                    <span class="tech-tag">GBNF</span>
+                    <span class="tech-tag">Deterministic</span>
+                </div>
+                <div class="card feature-card">
+                    <div class="icon-box" style="background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(245,158,11,0.15));">⚖️</div>
+                    <h3>Decision Engine & Verdicts</h3>
+                    <p>Parses AI feedback into structured severities (Critical, High, Medium, Low). Critical issues block commits/pushes automatically. Developers can override with <code>--force-ai</code>.</p>
+                    <span class="tech-tag">Severity Levels</span>
+                    <span class="tech-tag">Blocking</span>
+                </div>
+                <div class="card feature-card">
+                    <div class="icon-box" style="background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.15));">💬</div>
+                    <h3>Auto Commit Messages</h3>
+                    <p>Generates Conventional Commit messages from your diff (e.g. <code>feat(auth): add JWT validation</code>). Interactive flow: accept, edit in $EDITOR, or fall back to standard git.</p>
+                    <span class="tech-tag">Conventional Commits</span>
+                    <span class="tech-tag">Interactive</span>
+                </div>
+                <div class="card feature-card">
+                    <div class="icon-box" style="background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15));">🔗</div>
+                    <h3>Native Git (libgit2)</h3>
+                    <p>No shell-outs or brittle <code>popen()</code> calls. Directly traverses the Git object database via libgit2's C API. All C pointers wrapped in RAII <code>unique_ptr</code> with custom deleters.</p>
+                    <span class="tech-tag">libgit2</span>
+                    <span class="tech-tag">RAII</span>
+                    <span class="tech-tag">Zero Leaks</span>
+                </div>
+                <div class="card feature-card">
+                    <div class="icon-box" style="background: linear-gradient(135deg, rgba(236,72,153,0.15), rgba(139,92,246,0.15));">🧬</div>
+                    <h3>RAG Pipeline</h3>
+                    <p>Retrieves semantically related code from your repo and feeds it into prompts. Tree-sitter AST parsing, BPE tokenizer, ONNX embedding model, and FAISS vector search — all running locally.</p>
+                    <span class="tech-tag">ONNX Runtime</span>
+                    <span class="tech-tag">FAISS</span>
+                    <span class="tech-tag">Tree-sitter</span>
+                </div>
+                <div class="card feature-card">
+                    <div class="icon-box" style="background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(239,68,68,0.15));">💾</div>
+                    <h3>SQLite Review Memory</h3>
+                    <p>Every verdict persisted to a local SQLite DB with ACID transactions. Prepared statements prevent SQL injection. Async background writer keeps the CLI responsive.</p>
+                    <span class="tech-tag">SQLite3</span>
+                    <span class="tech-tag">ACID</span>
+                    <span class="tech-tag">Async</span>
+                </div>
+                <div class="card feature-card">
+                    <div class="icon-box" style="background: linear-gradient(135deg, rgba(6,182,212,0.15), rgba(16,185,129,0.15));">👻</div>
+                    <h3>Daemon Architecture</h3>
+                    <p>Background HTTP daemon keeps the model loaded in VRAM persistently. CLI sends lightweight HTTP requests. Zero cold-start penalty. Auto-shutdown after 15 min idle.</p>
+                    <span class="tech-tag">cpp-httplib</span>
+                    <span class="tech-tag">Localhost</span>
+                    <span class="tech-tag">IPC</span>
+                </div>
+                <div class="card feature-card">
+                    <div class="icon-box" style="background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.15));">🎨</div>
+                    <h3>Rich Terminal UI</h3>
+                    <p>FTXUI-powered colored reports, animated spinners, boxed review cards, and a beautiful history table. Severity-coded badges for every issue.</p>
+                    <span class="tech-tag">FTXUI</span>
+                    <span class="tech-tag">ANSI Colors</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ────── TECH STACK ────── -->
+        <section class="section fade-in" id="tech-stack">
+            <div class="section-header">
+                <div class="section-tag">Technology</div>
+                <h2 class="section-title">Technology Stack</h2>
+                <p class="section-desc">Every dependency was chosen deliberately for performance, reliability, and zero network dependency.</p>
+            </div>
+            <div class="dep-grid">
+                <div class="dep-item">
+                    <div class="name" style="color:var(--accent-purple);">llama.cpp</div>
+                    <div class="desc">Local LLM inference engine</div>
+                </div>
+                <div class="dep-item">
+                    <div class="name" style="color:var(--accent-blue);">libgit2</div>
+                    <div class="desc">Native Git integration (C API)</div>
+                </div>
+                <div class="dep-item">
+                    <div class="name" style="color:var(--accent-cyan);">nlohmann/json</div>
+                    <div class="desc">JSON parsing & serialization</div>
+                </div>
+                <div class="dep-item">
+                    <div class="name" style="color:var(--accent-green);">SQLite3</div>
+                    <div class="desc">Embedded relational database</div>
+                </div>
+                <div class="dep-item">
+                    <div class="name" style="color:var(--accent-orange);">FTXUI</div>
+                    <div class="desc">Terminal UI components</div>
+                </div>
+                <div class="dep-item">
+                    <div class="name" style="color:var(--accent-pink);">spdlog</div>
+                    <div class="desc">Structured file logging</div>
+                </div>
+                <div class="dep-item">
+                    <div class="name" style="color:var(--accent-red);">fmt</div>
+                    <div class="desc">Fast string formatting</div>
+                </div>
+                <div class="dep-item">
+                    <div class="name" style="color:var(--accent-cyan);">ONNX Runtime</div>
+                    <div class="desc">Neural network inference (RAG)</div>
+                </div>
+                <div class="dep-item">
+                    <div class="name" style="color:var(--accent-blue);">FAISS</div>
+                    <div class="desc">Vector similarity search</div>
+                </div>
+                <div class="dep-item">
+                    <div class="name" style="color:var(--accent-green);">Tree-sitter</div>
+                    <div class="desc">Incremental AST parsing (7 langs)</div>
+                </div>
+                <div class="dep-item">
+                    <div class="name" style="color:var(--accent-purple);">cpp-httplib</div>
+                    <div class="desc">HTTP server/client (daemon)</div>
+                </div>
+                <div class="dep-item">
+                    <div class="name" style="color:var(--accent-orange);">Catch2</div>
+                    <div class="desc">Unit testing framework</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ────── SYSTEM ARCHITECTURE ────── -->
+        <section class="section fade-in" id="architecture">
+            <div class="section-header">
+                <div class="section-tag">Architecture</div>
+                <h2 class="section-title">System Architecture</h2>
+                <p class="section-desc">High-level component diagram showing data flow from CLI to LLM and Git repository.</p>
+            </div>
+            <div class="diagram-container">
+                <pre class="mermaid">
+graph TD
+    classDef cli fill:#1e293b,stroke:#3b82f6,color:#f0f4f8
+    classDef git fill:#1e293b,stroke:#10b981,color:#f0f4f8
+    classDef ai fill:#1e293b,stroke:#8b5cf6,color:#f0f4f8
+    classDef core fill:#1e293b,stroke:#f59e0b,color:#f0f4f8
+    classDef persist fill:#1e293b,stroke:#ec4899,color:#f0f4f8
+    classDef rag fill:#1e293b,stroke:#06b6d4,color:#f0f4f8
+
+    CLI["CLI Router<br/>main.cpp"]:::cli
+
+    subgraph GIT["Git Integration"]
+        direction TB
+        LibGit["libgit2 Engine"]:::git
+        GitDiff["git_diff.cpp"]:::git
+        GitStatus["git_status.cpp"]:::git
+        DiffFilter["diff_filter.cpp"]:::git
+    end
+
+    subgraph AI["AI Client"]
+        direction TB
+        PromptBuilder["Prompt Builder"]:::ai
+        DClient["Daemon Client"]:::ai
+    end
+
+    subgraph CORE["Core Logic"]
+        direction TB
+        DecisionEngine["Decision Engine"]:::core
+        Parser["JSON Parser"]:::core
+        Aggregator["Review Aggregator"]:::core
+    end
+
+    subgraph DAEMON["Daemon Process (Background)"]
+        direction TB
+        DServer["Daemon Server<br/>HTTP"]:::ai
+        LlamaClient["LlamaClient"]:::ai
+        GBNF["GBNF Grammar"]:::ai
+        LlamaCPP["llama.cpp Engine"]:::ai
+    end
+
+    subgraph PERSIST["Persistence & UI"]
+        direction TB
+        SQLite[("SQLite Database")]:::persist
+        AsyncWriter["Async DB Writer"]:::persist
+        FTXUI["FTXUI Terminal UI"]:::persist
+        Logger["spdlog Logger"]:::persist
+    end
+
+    subgraph RAGP["RAG Pipeline"]
+        direction TB
+        CodeParser["Code Parser<br/>Tree-sitter"]:::rag
+        Embedder["ONNX Embedder"]:::rag
+        VectorStore["FAISS Vector Store"]:::rag
+        Orchestrator["RAG Orchestrator"]:::rag
+    end
+
+    CLI -->|"Extracts staged changes"| GitDiff
+    GitDiff --> LibGit
+    GitStatus --> LibGit
+    GitDiff -->|"File diffs"| DiffFilter
+    DiffFilter -->|"Filtered diffs"| PromptBuilder
+    Orchestrator -->|"RAG context"| PromptBuilder
+    PromptBuilder -->|"Prompt String"| CLI
+    CLI -->|"HTTP Request"| DClient
+    DClient --> DServer
+    DServer -->|"Constrains sampling"| LlamaClient
+    LlamaClient --> GBNF
+    LlamaClient --> LlamaCPP
+    LlamaCPP -->|"JSON String"| DServer
+    DServer -->|"JSON String"| DClient
+    DClient -->|"JSON String"| Parser
+    Parser -->|"Structured Data"| DecisionEngine
+    Aggregator -->|"Merged results"| DecisionEngine
+    DecisionEngine -->|"Verdicts"| AsyncWriter
+    AsyncWriter --> SQLite
+    DecisionEngine -->|"Displays report"| FTXUI
+    DecisionEngine -->|"Logs"| Logger
+                </pre>
+            </div>
+        </section>
+
+        <!-- ────── DATA FLOW ────── -->
+        <section class="section fade-in" id="data-flow">
+            <div class="section-header">
+                <div class="section-tag">Workflows</div>
+                <h2 class="section-title">Review Workflow — Sequence Diagram</h2>
+                <p class="section-desc">Exactly what happens when you run <code>mygit commit</code>.</p>
+            </div>
+            <div class="diagram-container">
+                <pre class="mermaid">
+sequenceDiagram
+    participant User
+    participant CLI
+    participant DiffFilter
+    participant LibGit2
+    participant RAG
+    participant DaemonClient
+    participant DaemonServer
+    participant LlamaCPP
+    participant DecisionEngine
+    participant SQLite
+
+    User->>CLI: mygit commit
+    CLI->>LibGit2: get_staged_file_diffs()
+    LibGit2-->>CLI: FileDiff[] with rename detection
+
+    CLI->>DiffFilter: filter(file_diffs)
+    Note over DiffFilter: Skip binaries,<br/>oversized files,<br/>pure renames
+    DiffFilter-->>CLI: FilteredDiff
+
+    CLI->>RAG: get_context_for_diff(patch)
+    RAG-->>CLI: Semantic context (top-k)
+
+    CLI->>DaemonClient: prompt + diff + GBNF grammar + context
+    DaemonClient->>DaemonServer: POST /review
+    DaemonServer->>LlamaCPP: inference
+    Note over LlamaCPP: Local GPU/CPU Inference<br/>Grammar-constrained output
+    
+    LlamaCPP-->>DaemonServer: "safe: true, issues: []"
+    DaemonServer-->>DaemonClient: 200 OK + JSON body
+    DaemonClient-->>CLI: JSON String
+    CLI->>DecisionEngine: evaluate(json)
+    
+    DecisionEngine->>SQLite: save_review_async()
+    alt No critical issues
+        DecisionEngine-->>CLI: ✅ PASS
+        CLI->>DaemonClient: generate_commit_message(diff)
+        DaemonClient->>DaemonServer: POST /commit
+        DaemonServer->>LlamaCPP: inference
+        LlamaCPP-->>DaemonServer: "feat: add hello world"
+        DaemonServer-->>DaemonClient: 200 OK + text
+        DaemonClient-->>CLI: "feat: add hello world"
+        CLI->>User: Use this message? [Y/n/e]
+        User-->>CLI: Y
+        CLI->>LibGit2: git commit
+        CLI-->>User: ✅ Success!
+    else Critical issue found
+        DecisionEngine-->>CLI: ❌ BLOCKED
+        CLI-->>User: Commit Aborted.<br/>Use --force-ai to override.
+    end
+                </pre>
+            </div>
+        </section>
+
+        <!-- ────── PROJECT STRUCTURE ────── -->
+        <section class="section fade-in" id="project-structure">
+            <div class="section-header">
+                <div class="section-tag">Structure</div>
+                <h2 class="section-title">Project Directory Structure</h2>
+                <p class="section-desc">The codebase is organized into highly modular, single-responsibility directories.</p>
+            </div>
+            <div class="file-tree">
+<span class="folder">AI_code_reviewer_git/</span>
+├── <span class="folder">ai/</span>                        <span class="comment">── AI inference & prompt construction</span>
+│   ├── <span class="highlight">llama_client.cpp/.h</span>     <span class="comment">── llama.cpp wrapper (GBNF, KV cache)</span>
+│   ├── <span class="highlight">prompt_builder.cpp/.h</span>   <span class="comment">── Review & commit message prompt templates</span>
+│   └── <span class="highlight">review_aggregator.cpp/.h</span><span class="comment">── Merges per-file reviews into one result</span>
+│
+├── <span class="folder">commands/</span>                   <span class="comment">── CLI command implementations</span>
+│   ├── <span class="file">commit_command.cpp/.h</span>   <span class="comment">── mygit commit (review → generate → commit)</span>
+│   ├── <span class="file">review_command.cpp/.h</span>   <span class="comment">── mygit review (analyze staged changes)</span>
+│   ├── <span class="file">push_command.cpp/.h</span>     <span class="comment">── mygit push (review → push upstream)</span>
+│   ├── <span class="file">history_command.cpp/.h</span>  <span class="comment">── mygit history (show review table)</span>
+│   ├── <span class="file">init_command.cpp/.h</span>     <span class="comment">── mygit init (build RAG index)</span>
+│   ├── <span class="file">setup_command.cpp/.h</span>    <span class="comment">── mygit setup (configure model)</span>
+│   ├── <span class="file">install_command.cpp/.h</span>  <span class="comment">── mygit install (add to PATH)</span>
+│   └── <span class="file">daemon_command.cpp/.h</span>   <span class="comment">── mygit daemon start|stop|status</span>
+│
+├── <span class="folder">config/</span>                     <span class="comment">── Configuration management</span>
+│   └── <span class="file">mygit_config.cpp/.h</span>    <span class="comment">── ~/.mygit/config.json load/save</span>
+│
+├── <span class="folder">daemon/</span>                     <span class="comment">── Background model daemon</span>
+│   ├── <span class="highlight">daemon_server.cpp/.h</span>   <span class="comment">── HTTP server holding model in VRAM</span>
+│   ├── <span class="highlight">daemon_client.cpp/.h</span>   <span class="comment">── HTTP client for CLI → daemon IPC</span>
+│   └── <span class="file">daemon_config.h</span>        <span class="comment">── Port, timeout, env var resolution</span>
+│
+├── <span class="folder">database/</span>                   <span class="comment">── Persistence layer</span>
+│   ├── <span class="highlight">sqlite_manager.cpp/.h</span>  <span class="comment">── RAII SQLite wrapper, schema, CRUD</span>
+│   └── <span class="highlight">async_db_writer.cpp/.h</span> <span class="comment">── Fire-and-forget background writer</span>
+│
+├── <span class="folder">decision_engine/</span>            <span class="comment">── Verdict logic</span>
+│   └── <span class="highlight">decision_engine.cpp/.h</span> <span class="comment">── should_allow(): block on Critical</span>
+│
+├── <span class="folder">diff_filter/</span>                <span class="comment">── Diff preprocessing</span>
+│   └── <span class="highlight">diff_filter.cpp/.h</span>    <span class="comment">── Size limits, binary skip, rename filter</span>
+│
+├── <span class="folder">git/</span>                        <span class="comment">── Git integration (libgit2)</span>
+│   ├── <span class="highlight">git_diff.cpp/.h</span>        <span class="comment">── Staged diff extraction + rename detect</span>
+│   ├── <span class="highlight">git_status.cpp/.h</span>      <span class="comment">── Branch name, staged changes check</span>
+│   └── <span class="file">git_runner.cpp/.h</span>      <span class="comment">── Subprocess git calls (legacy)</span>
+│
+├── <span class="folder">logger/</span>                     <span class="comment">── Structured logging</span>
+│   └── <span class="file">review_logger.cpp/.h</span>   <span class="comment">── spdlog rotating file logger</span>
+│
+├── <span class="folder">parsers/</span>                    <span class="comment">── Output parsing</span>
+│   └── <span class="file">json_parser.cpp/.h</span>     <span class="comment">── LLM JSON → ReviewResult</span>
+│
+├── <span class="folder">rag/</span>                        <span class="comment">── RAG pipeline (semantic retrieval)</span>
+│   ├── <span class="highlight">code_parser.cpp/.h</span>     <span class="comment">── Tree-sitter AST + text chunker</span>
+│   ├── <span class="highlight">bpe_tokenizer.cpp/.h</span>   <span class="comment">── HuggingFace BPE tokenizer</span>
+│   ├── <span class="highlight">embedder.cpp/.h</span>        <span class="comment">── ONNX Runtime embedding model</span>
+│   ├── <span class="highlight">vector_store.cpp/.h</span>    <span class="comment">── FAISS index + SQLite metadata</span>
+│   └── <span class="highlight">rag_orchestrator.cpp/.h</span><span class="comment">── Ties parser→embedder→store together</span>
+│
+├── <span class="folder">reports/</span>                    <span class="comment">── Output formatting</span>
+│   └── <span class="file">report_generator.cpp/.h</span><span class="comment">── Renders ReviewResult to stdout</span>
+│
+├── <span class="folder">ui/</span>                         <span class="comment">── Terminal interface</span>
+│   └── <span class="highlight">terminal_ui.cpp/.h</span>    <span class="comment">── FTXUI spinner, colored reports</span>
+│
+├── <span class="folder">include/mygit/</span>              <span class="comment">── Public headers</span>
+│   └── <span class="highlight">types.h</span>                <span class="comment">── Severity enum, Issue, ReviewResult</span>
+│
+├── <span class="folder">src/</span>                        <span class="comment">── Entry point</span>
+│   ├── <span class="highlight">main.cpp</span>               <span class="comment">── CLI router + command dispatch</span>
+│   └── <span class="file">types.cpp</span>              <span class="comment">── Severity string conversions</span>
+│
+├── <span class="folder">tests/</span>                      <span class="comment">── Unit tests (Catch2)</span>
+│   ├── <span class="file">test_decision_engine.cpp</span>
+│   ├── <span class="file">test_diff_filter.cpp</span>
+│   └── <span class="file">test_code_parser.cpp</span>
+│
+├── <span class="folder">docs/</span>                       <span class="comment">── Documentation</span>
+├── <span class="folder">scripts/</span>                    <span class="comment">── Helper scripts (Python)</span>
+├── <span class="folder">models/</span>                     <span class="comment">── GGUF + ONNX model weights</span>
+├── <span class="folder">vcpkg-overlays/</span>             <span class="comment">── Custom vcpkg port patches</span>
+├── <span class="file">CMakeLists.txt</span>              <span class="comment">── Build system (244 lines)</span>
+└── <span class="file">vcpkg.json</span>                 <span class="comment">── Dependency manifest</span>
+            </div>
+        </section>
+
+        <!-- ────── MODULE DEEP DIVE ────── -->
+        <section class="section fade-in" id="modules">
+            <div class="section-header">
+                <div class="section-tag">Deep Dive</div>
+                <h2 class="section-title">Module Deep Dive</h2>
+                <p class="section-desc">Every module explained — what it does, how it works, and why it exists.</p>
+            </div>
+            <div class="accordion">
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><span class="badge badge-purple">AI Engine</span> &nbsp; ai/ — LlamaClient, PromptBuilder, ReviewAggregator</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="accordion-body">
+                        <p><strong>LlamaClient</strong> (<code>ai/llama_client.cpp/.h</code>) — The heart of the AI subsystem. Loads a GGUF model once and holds it in memory. Key features:</p>
+                        <ul>
+                            <li><strong>GBNF Grammar Enforcement:</strong> Applies a BNF grammar at the sampling layer, making the model physically incapable of generating anything other than the expected JSON schema.</li>
+                            <li><strong>Prefix KV Caching:</strong> The system prompt + grammar instructions are cached in the KV cache. Subsequent calls with the same prefix skip re-evaluation entirely — only the diff suffix is processed.</li>
+                            <li><strong>Split Prompt API:</strong> <code>review(SplitPrompt)</code> and <code>generate_commit_message(SplitPrompt)</code> separate the static prefix from dynamic suffix for caching.</li>
+                            <li><strong>GPU Offloading:</strong> Configurable <code>n_gpu_layers</code> — set to 99 to offload the entire model to GPU.</li>
+                        </ul>
+                        <p style="margin-top:16px;"><strong>PromptBuilder</strong> (<code>ai/prompt_builder.cpp/.h</code>) — Constructs all prompts. Supports plain, context-aware (RAG), and split (KV-cacheable) variants for both reviews and commit messages.</p>
+                        <p style="margin-top:16px;"><strong>ReviewAggregator</strong> (<code>ai/review_aggregator.cpp/.h</code>) — Merges per-file review results into a single repository-level result. Used in batched per-file processing mode.</p>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><span class="badge badge-green">Git Layer</span> &nbsp; git/ — GitDiff, GitStatus, GitRunner</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="accordion-body">
+                        <p><strong>GitDiff</strong> (<code>git/git_diff.cpp/.h</code>) — Extracts staged changes using libgit2's C API directly (no shell). Two main methods:</p>
+                        <ul>
+                            <li><code>get_staged_diff()</code> — Returns the full unified diff as a string.</li>
+                            <li><code>get_staged_file_diffs()</code> — Returns per-file <code>FileDiff</code> objects with rename detection (<code>git_diff_find_similar</code>), binary flags, and content-change metadata.</li>
+                        </ul>
+                        <p style="margin-top:12px;"><strong>GitStatus</strong> — Queries branch name and staged state via libgit2. All libgit2 pointers use RAII <code>unique_ptr</code> with custom deleters.</p>
+                        <p style="margin-top:12px;"><strong>GitRunner</strong> — Legacy subprocess wrapper for operations not yet migrated to libgit2 (e.g., <code>git commit</code>, <code>git push</code>, <code>git ls-files</code>).</p>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><span class="badge badge-cyan">RAG Pipeline</span> &nbsp; rag/ — CodeParser, Embedder, VectorStore, Orchestrator</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="accordion-body">
+                        <p>The RAG (Retrieval-Augmented Generation) pipeline gives the AI context about your entire codebase, not just the diff.</p>
+                        <ul>
+                            <li><strong>CodeParser</strong> — Uses Tree-sitter to parse source files into logical <code>CodeUnit</code>s (functions, methods, classes). Supports C/C++, Python, JavaScript, TypeScript, Go, Rust, Java. Non-code files get sliding-window text chunks (~40 lines, 10-line overlap).</li>
+                            <li><strong>BpeTokenizer</strong> — Byte-level BPE tokenizer loading from HuggingFace <code>tokenizer.json</code>. Exact for ASCII source code; byte-level fallback for non-ASCII.</li>
+                            <li><strong>Embedder</strong> — Runs an ONNX embedding model (e.g., Qodo-Embed-1-1.5B) via ONNX Runtime. Returns mean-pooled, L2-normalized vectors. Supports CPU and optional CUDA acceleration.</li>
+                            <li><strong>VectorStore</strong> — FAISS IndexHNSWFlat for nearest-neighbor search. SQLite metadata maps FAISS IDs back to CodeUnits. Supports incremental indexing (per-file content hashes), tombstoning, and lazy rebuilds.</li>
+                            <li><strong>RagOrchestrator</strong> — Ties everything together. <code>update_index()</code> incrementally re-indexes changed files. <code>get_context_for_diff()</code> embeds the patch and retrieves top-k relevant code units.</li>
+                        </ul>
+                        <p style="margin-top:12px;"><strong>Graceful Fallback:</strong> If models/tokenizer aren't present, <code>available()</code> returns false and everything degrades to zero-RAG mode silently. Never throws.</p>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><span class="badge badge-orange">Decision Engine</span> &nbsp; decision_engine/ — Verdict Logic</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="accordion-body">
+                        <p><code>DecisionEngine::should_allow(result, force_ai)</code> — The gatekeeper. Simple, critical logic:</p>
+                        <ul>
+                            <li>Scans all issues in the <code>ReviewResult</code></li>
+                            <li>If any issue has <code>Severity::Critical</code> → blocks the operation</li>
+                            <li>If <code>force_ai == true</code> (via <code>--force-ai</code> flag) → overrides the block</li>
+                            <li>All other severities (High, Medium, Low) are reported but never block</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><span class="badge badge-blue">Diff Filter</span> &nbsp; diff_filter/ — Input Preprocessing</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="accordion-body">
+                        <p>Guards against sending garbage or oversized input to the model. Configurable thresholds:</p>
+                        <ul>
+                            <li><strong>max_total_diff_bytes:</strong> 50,000 — Rejects entire diff if total exceeds this</li>
+                            <li><strong>max_per_file_bytes:</strong> 20,000 — Skips individual files exceeding this</li>
+                            <li><strong>max_file_count:</strong> 30 — Rejects if too many files changed</li>
+                            <li><strong>Binary filtering:</strong> Automatically skips binary files</li>
+                            <li><strong>Rename filtering:</strong> Skips pure renames (no content changes) — prevents the AI from analyzing entire file contents for a simple move</li>
+                        </ul>
+                        <p style="margin-top:12px;">Returns a <code>FilteredDiff</code> with the cleaned patch, list of skipped files with reasons, and kept <code>FileDiff</code> objects for per-file batching.</p>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><span class="badge badge-pink">Database</span> &nbsp; database/ — SQLiteManager & AsyncDbWriter</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="accordion-body">
+                        <p><strong>SqliteManager</strong> — RAII wrapper around SQLite3. Manages:</p>
+                        <ul>
+                            <li><strong>Schema:</strong> <code>reviews</code> table (id, timestamp, branch, commit_hash, files_changed, blocked, repo_name) + <code>issues</code> table (severity, file, line, message)</li>
+                            <li><strong>Prepared Statements:</strong> All queries use parameter binding (<code>sqlite3_bind</code>) — zero SQL injection risk</li>
+                            <li><strong>ACID Transactions:</strong> Review + issues inserted atomically within BEGIN/COMMIT</li>
+                            <li><strong>Schema Migration:</strong> Auto-adds <code>repo_name</code> column to existing databases</li>
+                            <li><strong>Review Cache:</strong> Content-hash-based cache for per-file reviews to skip re-inference on unchanged diffs</li>
+                        </ul>
+                        <p style="margin-top:12px;"><strong>AsyncDbWriter</strong> — Fire-and-forget background thread. Decouples database writes from the CLI's critical path so the terminal returns instantly after inference completes. Uses mutex + condition_variable + FIFO queue. Destructor joins the thread and flushes pending writes.</p>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><span class="badge badge-cyan">Daemon</span> &nbsp; daemon/ — Server, Client, Config</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="accordion-body">
+                        <p>Solves the cold-start penalty problem by keeping the model loaded persistently.</p>
+                        <ul>
+                            <li><strong>DaemonServer:</strong> Binds to <code>127.0.0.1:49352</code>. Exposes <code>/review</code>, <code>/commit</code>, <code>/health</code>, <code>/shutdown</code> HTTP endpoints. Holds a <code>LlamaClient</code> instance that stays alive across all requests. Auto-shuts down after 15 minutes idle.</li>
+                            <li><strong>DaemonClient:</strong> Thin HTTP client that mirrors <code>LlamaClient</code>'s API. Supports split-prompt form for KV cache reuse across CLI invocations. <code>ensure_running()</code> auto-spawns a daemon if none is reachable.</li>
+                            <li><strong>spawn_detached_daemon():</strong> Creates a fully detached background process (no console window). Uses Windows <code>CreateProcessW</code> / POSIX <code>fork</code>+<code>exec</code>.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><span class="badge badge-green">UI & Logging</span> &nbsp; ui/, logger/, reports/</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="accordion-body">
+                        <ul>
+                            <li><strong>terminal_ui.cpp:</strong> FTXUI-based rich terminal output. Animated spinner during inference (background thread). Colored severity badges (🔴 Critical, 🟠 High, 🟡 Medium, 🔵 Low). Boxed review report card. Verdict line with ✓/✗/⚠ symbols.</li>
+                            <li><strong>review_logger.cpp:</strong> spdlog rotating file sink writing to <code>~/.mygit/logs/mygit.log</code>. Max 5MB per file, 3 rotated files. Logs timestamp, command, severity counts, blocked status, inference time.</li>
+                            <li><strong>report_generator.cpp:</strong> Simpler stdout renderer (fallback for non-FTXUI environments).</li>
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ────── DESIGN DECISIONS ────── -->
+        <section class="section fade-in" id="decisions">
+            <div class="section-header">
+                <div class="section-tag">Design</div>
+                <h2 class="section-title">Key Design Decisions & Reasoning</h2>
+                <p class="section-desc">Why specific architectural choices were made.</p>
+            </div>
+
+            <div class="decision-card">
+                <div class="number-circle" style="background: var(--gradient-1);">1</div>
+                <div>
+                    <h4>libgit2 Over Shell Commands</h4>
+                    <p>The original implementation used <code>popen("git diff --staged")</code> which proved incredibly brittle across operating systems — different newline handling, locale-dependent output, PATH requirements. Embedding libgit2 directly gives in-memory access to the Git object database without any subprocess overhead. All C-style pointers are wrapped in <code>std::unique_ptr</code> with custom deleters for guaranteed zero memory leaks.</p>
+                </div>
+            </div>
+
+            <div class="decision-card">
+                <div class="number-circle" style="background: var(--gradient-3);">2</div>
+                <div>
+                    <h4>GBNF Grammar Constraints Over Prompt Engineering</h4>
+                    <p>Asking an LLM to "return JSON" via prompt engineering is unreliable — you get random markdown blocks, trailing commas, or complete hallucinations. GBNF grammars operate at the <em>sampling layer</em>, mathematically constraining which tokens can be generated at each step. The model literally cannot produce anything other than the expected JSON schema. This eliminates the entire class of "parsing error" bugs.</p>
+                </div>
+            </div>
+
+            <div class="decision-card">
+                <div class="number-circle" style="background: var(--gradient-2);">3</div>
+                <div>
+                    <h4>Pimpl Pattern for Header Hygiene</h4>
+                    <p>Heavy headers like <code>onnxruntime_cxx_api.h</code>, <code>llama.h</code>, <code>tree_sitter/api.h</code>, <code>httplib.h</code>, and <code>sqlite3.h</code> are kept strictly out of public headers using the Pimpl (Pointer-to-Implementation) idiom. Only the <code>.cpp</code> files pay the compile-time cost. This keeps compile times low and prevents transitive dependency leaks.</p>
+                </div>
+            </div>
+
+            <div class="decision-card">
+                <div class="number-circle" style="background: var(--gradient-4);">4</div>
+                <div>
+                    <h4>Graceful Fallback Architecture</h4>
+                    <p>Every optional subsystem (RAG pipeline, daemon, ONNX CUDA) follows the same pattern: construction never throws, <code>available()</code> returns false if resources are missing, and all methods become safe no-ops. This means <code>mygit commit</code> works immediately out of the box with zero setup, and features activate incrementally as the user provides model files.</p>
+                </div>
+            </div>
+
+            <div class="decision-card">
+                <div class="number-circle" style="background: linear-gradient(135deg, var(--accent-orange), var(--accent-red));">5</div>
+                <div>
+                    <h4>Daemon Architecture for Zero Cold Starts</h4>
+                    <p>Loading a language model takes seconds — unacceptable when the user runs <code>review</code> then immediately <code>commit</code>. The daemon pattern keeps the model in VRAM persistently. The CLI sends lightweight HTTP requests to <code>localhost:49352</code>. Split-prompt KV caching works <em>across CLI invocations</em> since the daemon outlives any single process.</p>
+                </div>
+            </div>
+
+            <div class="decision-card">
+                <div class="number-circle" style="background: linear-gradient(135deg, var(--accent-pink), var(--accent-purple));">6</div>
+                <div>
+                    <h4>Async Database Writes</h4>
+                    <p>Blocking the main thread for SQLite I/O while the user waits is bad UX. <code>AsyncDbWriter</code> uses a background thread with a mutex + condition variable + FIFO queue so the CLI returns the instant inference finishes. The destructor joins the thread and flushes, guaranteeing no data loss even on abrupt shutdown.</p>
+                </div>
+            </div>
+
+            <div class="decision-card">
+                <div class="number-circle" style="background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));">7</div>
+                <div>
+                    <h4>Tree-sitter for AST-Level Chunking</h4>
+                    <p>Whole-file embeddings dilute semantic relevance. By parsing files into AST-level <code>CodeUnit</code>s (individual functions, methods, classes), each embedding represents a focused, self-contained piece of logic. FAISS retrieval then returns exactly the relevant function, not a 500-line file where 3 lines matter.</p>
+                </div>
+            </div>
+
+            <div class="decision-card">
+                <div class="number-circle" style="background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));">8</div>
+                <div>
+                    <h4>Per-Repo RAG Isolation</h4>
+                    <p>RAG index (<code>rag.index</code>) and metadata (<code>rag.db</code>) are stored inside each repository's <code>.git/mygit/</code> directory — never globally. This prevents cross-repo embedding clashes. Heavy ONNX model weights stay in <code>~/.mygit/models/</code> (shared) to save disk space.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ────── DESIGN PATTERNS ────── -->
+        <section class="section fade-in" id="patterns">
+            <div class="section-header">
+                <div class="section-tag">Patterns</div>
+                <h2 class="section-title">Design Patterns Used</h2>
+            </div>
+            <div class="feature-grid">
+                <div class="card">
+                    <h3 style="margin-bottom:10px;">🏗️ RAII Everywhere</h3>
+                    <p style="font-size:14px; color:var(--text-secondary);">Every resource — libgit2 handles, SQLite connections, llama contexts, ONNX sessions — wrapped in <code>unique_ptr</code> with custom deleters. No manual <code>free()</code> or <code>close()</code> calls anywhere.</p>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom:10px;">🫣 Pimpl Idiom</h3>
+                    <p style="font-size:14px; color:var(--text-secondary);">Heavy implementation headers (<code>llama.h</code>, <code>onnxruntime</code>, <code>tree_sitter</code>, <code>httplib</code>, <code>sqlite3</code>) hidden behind <code>struct Impl</code> pointers. Only <code>.cpp</code> files pay the include cost.</p>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom:10px;">🔌 Strategy Pattern</h3>
+                    <p style="font-size:14px; color:var(--text-secondary);">CLI commands dispatch through <code>DaemonClient</code> or direct <code>LlamaClient</code> transparently — same API surface for both code paths.</p>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom:10px;">📦 Producer-Consumer</h3>
+                    <p style="font-size:14px; color:var(--text-secondary);"><code>AsyncDbWriter</code> uses a classic mutex + CV + queue pattern. Main thread produces work items; background thread consumes them asynchronously.</p>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom:10px;">🎭 Facade Pattern</h3>
+                    <p style="font-size:14px; color:var(--text-secondary);"><code>RagOrchestrator</code> is a facade over <code>CodeParser</code> + <code>Embedder</code> + <code>VectorStore</code>. Callers interact with one clean interface.</p>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom:10px;">⚡ Graceful Degradation</h3>
+                    <p style="font-size:14px; color:var(--text-secondary);">Optional features (RAG, daemon, CUDA) degrade silently when unavailable. <code>available()</code> check → no-op fallback → zero crashes.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ────── SAFETY & PRIVACY ────── -->
+        <section class="section fade-in" id="safety">
+            <div class="section-header">
+                <div class="section-tag">Security</div>
+                <h2 class="section-title">Safety & Privacy Guarantees</h2>
+            </div>
+            <div class="feature-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+                <div class="card">
+                    <h3 style="color:var(--accent-green); margin-bottom:12px;">🔒 100% Local Inference</h3>
+                    <p style="font-size:14px; color:var(--text-secondary);">All AI inference runs on your hardware. No API keys, no cloud calls, no data leaves your machine. Your proprietary code stays private.</p>
+                </div>
+                <div class="card">
+                    <h3 style="color:var(--accent-blue); margin-bottom:12px;">🛡️ SQL Injection Prevention</h3>
+                    <p style="font-size:14px; color:var(--text-secondary);">Every database query uses prepared statements with <code>sqlite3_bind</code> parameter binding. User input is never interpolated into SQL strings.</p>
+                </div>
+                <div class="card">
+                    <h3 style="color:var(--accent-purple); margin-bottom:12px;">🧱 Memory Safety (RAII)</h3>
+                    <p style="font-size:14px; color:var(--text-secondary);">All C-style resource handles are wrapped in RAII smart pointers. Zero manual memory management = zero leaks, zero double-frees.</p>
+                </div>
+                <div class="card">
+                    <h3 style="color:var(--accent-orange); margin-bottom:12px;">📐 Grammar-Enforced Output</h3>
+                    <p style="font-size:14px; color:var(--text-secondary);">GBNF grammar constraint makes parsing failures mathematically impossible. The decision engine always receives well-formed data.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ────── REVIEW FLOW ────── -->
+        <section class="section fade-in" id="review-flow">
+            <div class="section-header">
+                <div class="section-tag">Workflow</div>
+                <h2 class="section-title">Review Workflow — Step by Step</h2>
+            </div>
+            <div class="flow-steps">
+                <div class="flow-step">
+                    <div class="step-num" style="background:var(--gradient-1);">1</div>
+                    <h5>Extract Diff</h5>
+                    <p>libgit2 extracts staged changes with rename detection</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-num" style="background:var(--gradient-2);">2</div>
+                    <h5>Filter</h5>
+                    <p>Skip binaries, oversized files, pure renames</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-num" style="background:var(--gradient-3);">3</div>
+                    <h5>RAG Context</h5>
+                    <p>Retrieve semantically relevant code from the repo</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-num" style="background:var(--gradient-4);">4</div>
+                    <h5>Build Prompt</h5>
+                    <p>Combine instructions + context + diff</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-num" style="background:linear-gradient(135deg,#f59e0b,#ef4444);">5</div>
+                    <h5>Inference</h5>
+                    <p>Grammar-constrained local LLM generates JSON</p>
+                </div>
+                <div class="flow-step">
+                    <div class="step-num" style="background:linear-gradient(135deg,#ec4899,#8b5cf6);">6</div>
+                    <h5>Verdict</h5>
+                    <p>Decision engine blocks or allows based on severity</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ────── COMMIT FLOW ────── -->
+        <section class="section fade-in" id="commit-flow">
+            <div class="section-header">
+                <div class="section-tag">Workflow</div>
+                <h2 class="section-title">Commit Workflow — Interactive Flow</h2>
+            </div>
+            <div class="diagram-container">
+                <pre class="mermaid">
+flowchart TD
+    A["mygit commit"] --> B{"Message provided<br/>with -m flag?"}
+    B -->|Yes| C["Run AI Review"]
+    B -->|No| C
+    C --> D{"Review<br/>Passed?"}
+    D -->|"❌ Critical Issues"| E["Commit Blocked"]
+    E --> F{"--force-ai<br/>used?"}
+    F -->|Yes| G["Override: Proceed"]
+    F -->|No| H["❌ Abort"]
+    D -->|"✅ No Critical"| I{"Message<br/>provided?"}
+    I -->|"Yes (-m)"| J["Commit with user message"]
+    I -->|No| K["AI generates commit message"]
+    K --> L{"User Choice:<br/>Y / n / e"}
+    L -->|Y| M["Commit with AI message"]
+    L -->|n| N["Open git editor"]
+    L -->|e| O["Open $EDITOR<br/>with AI message pre-filled"]
+    G --> I
+
+    style A fill:#1e293b,stroke:#3b82f6,color:#f0f4f8
+    style E fill:#1e293b,stroke:#ef4444,color:#f0f4f8
+    style H fill:#1e293b,stroke:#ef4444,color:#f0f4f8
+    style J fill:#1e293b,stroke:#10b981,color:#f0f4f8
+    style M fill:#1e293b,stroke:#10b981,color:#f0f4f8
+    style N fill:#1e293b,stroke:#10b981,color:#f0f4f8
+    style O fill:#1e293b,stroke:#10b981,color:#f0f4f8
+                </pre>
+            </div>
+        </section>
+
+        <!-- ────── RAG PIPELINE ────── -->
+        <section class="section fade-in" id="rag-flow">
+            <div class="section-header">
+                <div class="section-tag">RAG</div>
+                <h2 class="section-title">RAG Pipeline — Deep Dive</h2>
+                <p class="section-desc">How mygit understands your entire repository, not just the diff.</p>
+            </div>
+            <div class="diagram-container">
+                <pre class="mermaid">
+flowchart LR
+    subgraph Indexing["Indexing Phase (mygit init)"]
+        direction TB
+        A["Git-tracked files"] --> B["CodeParser<br/>Tree-sitter AST"]
+        B --> C["CodeUnits<br/>(functions, classes)"]
+        A --> B2["Text Chunker<br/>(non-code files)"]
+        B2 --> C
+        C --> D["BPE Tokenizer"]
+        D --> E["ONNX Embedder<br/>(Qodo-Embed-1.5B)"]
+        E --> F["FAISS Index<br/>(HNSW)"]
+    end
+
+    subgraph Retrieval["Retrieval Phase (mygit commit)"]
+        direction TB
+        G["Git Diff"] --> H["Embed diff text"]
+        H --> I["FAISS Search<br/>(top-k nearest)"]
+        I --> J["Retrieved CodeUnits"]
+        J --> K["Insert into<br/>LLM prompt"]
+    end
+
+    F -.-> I
+
+    style A fill:#1e293b,stroke:#06b6d4,color:#f0f4f8
+    style F fill:#1e293b,stroke:#8b5cf6,color:#f0f4f8
+    style K fill:#1e293b,stroke:#10b981,color:#f0f4f8
+                </pre>
+            </div>
+            <div class="two-col" style="margin-top:20px;">
+                <div class="card">
+                    <h3 style="color:var(--accent-cyan); margin-bottom:12px;">🌳 Supported Languages</h3>
+                    <p style="font-size:14px; color:var(--text-secondary); line-height:2;">
+                        <span class="badge badge-blue">C/C++</span>
+                        <span class="badge badge-green">Python</span>
+                        <span class="badge badge-orange">JavaScript</span>
+                        <span class="badge badge-cyan">TypeScript</span>
+                        <span class="badge badge-purple">Go</span>
+                        <span class="badge badge-red">Rust</span>
+                        <span class="badge badge-pink">Java</span>
+                        <br>+ <span style="color:var(--text-muted);">Universal text chunker for all other files</span>
+                    </p>
+                </div>
+                <div class="card">
+                    <h3 style="color:var(--accent-purple); margin-bottom:12px;">⚡ Incremental Indexing</h3>
+                    <p style="font-size:14px; color:var(--text-secondary);">
+                        Files are tracked by content hash. Only modified files are re-parsed and re-embedded on each <code>mygit init</code> or <code>mygit commit</code>. Deleted files are purged automatically. Per-repo isolation via <code>.git/mygit/</code>.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ────── DAEMON SYSTEM ────── -->
+        <section class="section fade-in" id="daemon-flow">
+            <div class="section-header">
+                <div class="section-tag">Daemon</div>
+                <h2 class="section-title">Daemon System — Zero Cold Starts</h2>
+            </div>
+            <div class="diagram-container">
+                <pre class="mermaid">
+sequenceDiagram
+    participant CLI as mygit CLI
+    participant DC as DaemonClient
+    participant DS as DaemonServer
+    participant LC as LlamaClient
+    participant GPU as GPU/VRAM
+
+    Note over DS,GPU: Model loaded once, persists in VRAM
+
+    CLI->>DC: ensure_running()
+    alt Daemon not running
+        DC->>DS: spawn_detached_daemon()
+        DS->>LC: Load GGUF model
+        LC->>GPU: Offload layers to VRAM
+        DS-->>DC: /health → 200 OK
+    end
+
+    CLI->>DC: review(SplitPrompt)
+    DC->>DS: POST /review
+    DS->>LC: review(prompt) [KV cache reused]
+    LC-->>DS: JSON result
+    DS-->>DC: HTTP response
+    DC-->>CLI: JSON string
+
+    Note over DS: Auto-shutdown after 15 min idle
+                </pre>
+            </div>
+        </section>
+
+        <!-- ────── CLI COMMANDS ────── -->
+        <section class="section fade-in" id="commands">
+            <div class="section-header">
+                <div class="section-tag">Reference</div>
+                <h2 class="section-title">CLI Commands Reference</h2>
+            </div>
+            <table class="styled-table">
+                <thead>
+                    <tr>
+                        <th>Command</th>
+                        <th>Description</th>
+                        <th>Source File</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>mygit setup</code></td>
+                        <td>Interactive prompt to configure model path and GPU layer count. Saves to <code>~/.mygit/config.json</code>.</td>
+                        <td><code>commands/setup_command.cpp</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>mygit install</code></td>
+                        <td>Copies binary to <code>~/.mygit/bin/</code> and adds it to the system PATH (Windows registry / POSIX shell rc).</td>
+                        <td><code>commands/install_command.cpp</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>mygit review</code></td>
+                        <td>Analyzes staged changes and prints a colored FTXUI report with severity-coded issues.</td>
+                        <td><code>commands/review_command.cpp</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>mygit commit</code></td>
+                        <td>Runs review → if passes, generates AI commit message → interactive Y/n/e flow → commits.</td>
+                        <td><code>commands/commit_command.cpp</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>mygit commit -m "msg"</code></td>
+                        <td>Runs review → if passes, commits using the provided message.</td>
+                        <td><code>commands/commit_command.cpp</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>mygit push &lt;remote&gt; &lt;branch&gt;</code></td>
+                        <td>Runs review → if passes, pushes code upstream.</td>
+                        <td><code>commands/push_command.cpp</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>mygit history</code></td>
+                        <td>Displays last 10 reviews in a beautiful FTXUI table (timestamp, repo, branch, issues, verdict).</td>
+                        <td><code>commands/history_command.cpp</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>mygit init</code></td>
+                        <td>Builds/updates the RAG embedding index for the current repository.</td>
+                        <td><code>commands/init_command.cpp</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>mygit daemon start|stop|status</code></td>
+                        <td>Manage the background model daemon (start, stop, check health).</td>
+                        <td><code>commands/daemon_command.cpp</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            <p style="margin-top:16px; font-size:14px; color:var(--text-secondary);">
+                <span class="badge badge-orange">Flag</span> &nbsp; Append <code>--force-ai</code> to <code>commit</code> or <code>push</code> to override AI blocking on critical issues.
+            </p>
+        </section>
+
+        <!-- ────── BUILD & SETUP ────── -->
+        <section class="section fade-in" id="build">
+            <div class="section-header">
+                <div class="section-tag">Setup</div>
+                <h2 class="section-title">Build & Setup Guide</h2>
+            </div>
+            <div class="two-col">
+                <div>
+                    <h3 style="margin-bottom:16px;">Prerequisites</h3>
+                    <ul class="module-list">
+                        <li><strong>Compiler:</strong> <span>C++20 (MSVC 19.3+, GCC 13+, Clang 17+)</span></li>
+                        <li><strong>Build System:</strong> <span>CMake 3.21+ & Ninja</span></li>
+                        <li><strong>Package Manager:</strong> <span>vcpkg (bootstrapped)</span></li>
+                        <li><strong>Model:</strong> <span>Any GGUF model (recommended: Qwen2.5-Coder-1.5B-Instruct)</span></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 style="margin-bottom:16px;">Build Commands</h3>
+                    <pre class="code-block"><span class="comment"># Clone the repository</span>
+<span class="func">git</span> clone &lt;repo-url&gt;
+<span class="func">cd</span> AI_code_reviewer_git
+
+<span class="comment"># Configure (vcpkg auto-fetches all deps)</span>
+<span class="func">cmake</span> --preset default
+
+<span class="comment"># Build</span>
+<span class="func">cmake</span> --build build/default
+
+<span class="comment"># Configure model</span>
+.\build\default\mygit.exe <span class="string">setup</span>
+
+<span class="comment"># Install to PATH</span>
+.\build\default\mygit.exe <span class="string">install</span></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- ────── ROADMAP ────── -->
+        <section class="section fade-in" id="roadmap">
+            <div class="section-header">
+                <div class="section-tag">Future</div>
+                <h2 class="section-title">Roadmap & Future Vision</h2>
+                <p class="section-desc">The evolution from CLI tool to AI daemon to agentic code assistant.</p>
+            </div>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h4><span class="badge badge-green">✅ Completed</span> &nbsp; Level 0: Core Engine</h4>
+                    <p>libgit2 integration, GBNF grammar-constrained inference, decision engine, SQLite memory, FTXUI terminal UI, conventional commit generation.</p>
+                </div>
+                <div class="timeline-item">
+                    <h4><span class="badge badge-green">✅ Completed</span> &nbsp; Level 0.5: Daemon + Async</h4>
+                    <p>Background daemon server/client, async database writes, structured spdlog logging, diff filtering, rename detection.</p>
+                </div>
+                <div class="timeline-item">
+                    <h4><span class="badge badge-green">✅ Completed</span> &nbsp; Level 1: Pipeline Acceleration</h4>
+                    <p>Prefix KV caching, split-prompt API, batched per-file processing, review aggregation, incremental processing, diff caching.</p>
+                </div>
+                <div class="timeline-item">
+                    <h4><span class="badge badge-green">✅ Completed</span> &nbsp; RAG Pipeline</h4>
+                    <p>Multi-language Tree-sitter parsing (7 languages), universal text chunker, BPE tokenizer, ONNX embedder, FAISS vector store, per-repo isolation, incremental indexing.</p>
+                </div>
+                <div class="timeline-item">
+                    <h4><span class="badge badge-blue">Planned</span> &nbsp; Level 2: Model Optimization</h4>
+                    <p>Static prompt graph optimization, mixed-precision quantization benchmarking (INT8/INT4/FP16), task-specific model routing (small models for commit messages, large for reviews), ONNX graph optimization passes.</p>
+                </div>
+                <div class="timeline-item">
+                    <h4><span class="badge badge-purple">Vision</span> &nbsp; Level 3: Agentic Shift</h4>
+                    <p>Patch generation & safe auto-fix. Instead of just reporting issues, mygit generates Git-compatible unified patches. Preview, validate, and apply fixes with one command.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ────── FOOTER ────── -->
+        <footer style="padding: 40px 60px; border-top: 1px solid var(--border-glass); text-align: center;">
+            <p style="font-size: 13px; color: var(--text-muted);">
+                ⚡ mygit — AI-Powered Code Reviewer &nbsp;|&nbsp; C++20 &nbsp;|&nbsp; MIT License &nbsp;|&nbsp; Built with local AI
+            </p>
+            <p style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">
+                Documentation auto-generated from source code audit &nbsp;·&nbsp; 40+ source files analyzed
+            </p>
+        </footer>
+
+    </main>
+
+    <script>
+        // ─── Mermaid Init ───
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#f0f4f8',
+                primaryBorderColor: '#3b82f6',
+                lineColor: '#3b82f6',
+                secondaryColor: '#1e293b',
+                tertiaryColor: '#1e293b',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '13px',
+            },
+            flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+            sequence: { useMaxWidth: true, actorMargin: 80 },
+        });
+
+        // ─── Accordion ───
+        document.querySelectorAll('.accordion-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const item = header.parentElement;
+                item.classList.toggle('active');
+            });
+        });
+
+        // ─── Scroll Animations ───
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+        // ─── Active Nav Link ───
+        const sections = document.querySelectorAll('.section, .hero');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop - 120;
+                if (scrollY >= sectionTop) {
+                    current = section.getAttribute('id');
+                }
+            });
+            navLinks.forEach(link => {
+                link.style.borderLeftColor = 'transparent';
+                link.style.color = '';
+                if (link.getAttribute('href') === '#' + current) {
+                    link.style.borderLeftColor = '#3b82f6';
+                    link.style.color = '#f0f4f8';
+                }
+            });
+        });
+
+        // ─── Close sidebar on mobile link click ───
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 900) {
+                    document.querySelector('.sidebar').classList.remove('open');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
