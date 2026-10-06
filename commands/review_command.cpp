@@ -112,15 +112,27 @@ ReviewResult run_batched_review(const daemon::DaemonClient& daemon_client, bool&
     std::vector<ReviewResult> per_file;
     per_file.reserve(filtered.kept_files.size());
     std::vector<std::pair<const git::FileDiff*, std::string>> misses;
-    for (const git::FileDiff& fd : filtered.kept_files) {
-        const std::string path = display_path(fd);
-        const std::string hash = database::hash_diff_content(path, fd.patch);
 
-        ReviewResult cached;
-        if (cache.get_cached_file_review(hash, cached)) {
-            per_file.push_back(std::move(cached));
+    std::vector<std::string> all_hashes;
+    all_hashes.reserve(filtered.kept_files.size());
+    std::vector<std::pair<const git::FileDiff*, std::string>> all_files_with_hashes;
+    all_files_with_hashes.reserve(filtered.kept_files.size());
+
+    for (const git::FileDiff& fd : filtered.kept_files) {
+        const std::string hash = database::hash_diff_content(display_path(fd), fd.patch);
+        all_hashes.push_back(hash);
+        all_files_with_hashes.emplace_back(&fd, hash);
+    }
+
+    std::unordered_map<std::string, ReviewResult> cached_results;
+    cache.get_cached_file_reviews(all_hashes, cached_results);
+
+    for (auto& [fd_ptr, hash] : all_files_with_hashes) {
+        auto it = cached_results.find(hash);
+        if (it != cached_results.end()) {
+            per_file.push_back(std::move(it->second));
         } else {
-            misses.emplace_back(&fd, hash);
+            misses.emplace_back(fd_ptr, hash);
         }
     }
 

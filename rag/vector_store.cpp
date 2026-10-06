@@ -257,6 +257,43 @@ void VectorStore::remove_file(const std::string& file_path) {
     impl_->maybe_rebuild();
 }
 
+void VectorStore::remove_files(const std::vector<std::string>& file_paths) {
+    if (!available() || file_paths.empty()) return;
+
+    char* err = nullptr;
+    sqlite3_exec(impl_->db, "BEGIN TRANSACTION;", nullptr, nullptr, &err);
+    if (err) { sqlite3_free(err); return; }
+
+    sqlite3_stmt* stmt_update = nullptr;
+    sqlite3_prepare_v2(impl_->db, "UPDATE rag_units SET removed = 1 WHERE file_path = ?;", -1, &stmt_update, nullptr);
+
+    sqlite3_stmt* stmt_delete = nullptr;
+    sqlite3_prepare_v2(impl_->db, "DELETE FROM rag_index_state WHERE file_path = ?;", -1, &stmt_delete, nullptr);
+
+    for (const auto& file_path : file_paths) {
+        if (stmt_update) {
+            sqlite3_reset(stmt_update);
+            sqlite3_clear_bindings(stmt_update);
+            sqlite3_bind_text(stmt_update, 1, file_path.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_step(stmt_update);
+        }
+
+        if (stmt_delete) {
+            sqlite3_reset(stmt_delete);
+            sqlite3_clear_bindings(stmt_delete);
+            sqlite3_bind_text(stmt_delete, 1, file_path.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_step(stmt_delete);
+        }
+    }
+
+    if (stmt_update) sqlite3_finalize(stmt_update);
+    if (stmt_delete) sqlite3_finalize(stmt_delete);
+
+    sqlite3_exec(impl_->db, "COMMIT;", nullptr, nullptr, nullptr);
+
+    impl_->maybe_rebuild();
+}
+
 std::vector<CodeUnit> VectorStore::search(const std::vector<float>& query, int top_k) const {
     std::vector<CodeUnit> results;
     if (!available() || !impl_->index || impl_->index->ntotal == 0 || top_k <= 0) return results;
