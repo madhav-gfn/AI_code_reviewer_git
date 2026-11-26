@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <cstdlib>
+#include <cerrno>
 #include <stdexcept>
 #include <thread>
 #include <atomic>
@@ -16,6 +17,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #else
+#include <sys/wait.h>
 #include <unistd.h>
 #endif
 
@@ -216,6 +218,49 @@ void spawn_detached_daemon() {
                             quote_shell_arg(config.model_path) + " --gpu-layers " +
                             std::to_string(config.gpu_layers) + " >/dev/null 2>&1 &";
     std::system(cmd.c_str());
+#endif
+}
+
+int run_daemon_foreground() {
+    std::filesystem::path daemon_path = current_executable_path();
+#if defined(_WIN32)
+    daemon_path.replace_filename("mygit_daemon.exe");
+#else
+    daemon_path.replace_filename("mygit_daemon");
+#endif
+    const std::string exe = daemon_path.string();
+    const config::MygitConfig config = config::load_config();
+#if defined(_WIN32)
+    std::string cmdline = quote_windows_arg(exe) + " --model-path " +
+                          quote_windows_arg(config.model_path) + " --gpu-layers " +
+                          std::to_string(config.gpu_layers);
+    STARTUPINFOA si{};
+    si.cb = sizeof(si);
+    PROCESS_INFORMATION pi{};
+    if (!CreateProcessA(nullptr, cmdline.data(), nullptr, nullptr, FALSE, 0,
+                        nullptr, nullptr, &si, &pi)) {
+        throw std::runtime_error("Could not start the local daemon executable: " + exe);
+    }
+    CloseHandle(pi.hThread);
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    DWORD exit_code = 1;
+    GetExitCodeProcess(pi.hProcess, &exit_code);
+    CloseHandle(pi.hProcess);
+    return static_cast<int>(exit_code);
+#else
+    const pid_t child = fork();
+    if (child < 0) throw std::runtime_error("Could not fork the local daemon process");
+    if (child == 0) {
+        execl(exe.c_str(), exe.c_str(), "--model-path", config.model_path.c_str(),
+              "--gpu-layers", std::to_string(config.gpu_layers).c_str(),
+              static_cast<char*>(nullptr));
+        _exit(127);
+    }
+    int status = 0;
+    while (waitpid(child, &status, 0) < 0) {
+        if (errno != EINTR) throw std::runtime_error("Waiting for the local daemon process failed");
+    }
+    return WIFEXITED(status) ? WEXITSTATUS(status) : 1;
 #endif
 }
 

@@ -238,11 +238,6 @@ if(MYGIT_BUILD_DAEMON)
 add_library(mygit_server_core STATIC
     ${MYGIT_SHARED_DIR}/ai/llama_client.cpp
     ${MYGIT_SHARED_DIR}/ai/prompt_builder.cpp
-    ${MYGIT_SHARED_DIR}/ai/review_aggregator.cpp
-    ${MYGIT_SHARED_DIR}/parsers/json_parser.cpp
-    ${MYGIT_SHARED_DIR}/decision_engine/decision_engine.cpp
-    ${MYGIT_SHARED_DIR}/diff_filter/diff_filter.cpp
-    ${MYGIT_SHARED_DIR}/src/types.cpp
     ${MYGIT_DAEMON_DIR}/server.cpp
 )
 target_include_directories(mygit_server_core PUBLIC

@@ -1,6 +1,7 @@
 #include "commands/daemon_command.h"
 
 #include <iostream>
+#include <algorithm>
 #include <string>
 
 #include "daemon_client.h"
@@ -21,6 +22,10 @@ int run_daemon(const std::vector<std::string>& args) {
             std::cout << "mygit daemon is already running.\n";
             return 0;
         }
+        const bool detached = std::find(args.begin() + 1, args.end(), "-d") != args.end() ||
+                              std::find(args.begin() + 1, args.end(), "--detached") != args.end();
+        if (!detached) return daemon::run_daemon_foreground();
+
         daemon::spawn_detached_daemon();
         if (daemon::wait_for_daemon_ready(daemon::resolve_port(), 120)) {
             std::cout << "mygit daemon is ready.\n";

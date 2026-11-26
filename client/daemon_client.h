@@ -52,11 +52,12 @@ private:
     int port_;
 };
 
-// Spawns `<this executable> daemon start` as a fully detached background
-// process (no console window; keeps running after the spawning process
-// exits). Shared by DaemonClient::ensure_running()'s auto-start path and by
-// `mygit daemon start -d`.
+// Spawns the sibling `mygit_daemon` executable as a detached background
+// process. Shared by DaemonClient::ensure_running() and `mygit daemon start -d`.
 void spawn_detached_daemon();
+
+// Runs the companion daemon in the current terminal and returns its exit code.
+int run_daemon_foreground();
 
 // Polls GET /health on `port` every 500ms until it responds or
 // `timeout_seconds` elapses. Returns true once the daemon is reachable.

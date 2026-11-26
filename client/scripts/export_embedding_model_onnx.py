@@ -4,7 +4,7 @@ rag/embedder.cpp expects.
 
 Usage:
     pip install torch transformers onnx onnxruntime
-    python scripts/export_embedding_model_onnx.py [path-to-hf-model-checkout]
+    python client/scripts/export_embedding_model_onnx.py [path-to-hf-model-checkout]
 
 If no path is given, defaults to model_customization/<model-name> next to
 this repo (see the RAG setup guide in README.md for how to get a model

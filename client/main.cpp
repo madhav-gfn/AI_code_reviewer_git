@@ -24,7 +24,7 @@ void print_usage() {
               << "    mygit push <remote> <branch> --force-ai\n"
               << "    mygit history                       -- show last 10 reviews\n"
               << "    mygit init                          -- build RAG embedding index for this repo\n"
-              << "    mygit daemon <start|stop|status>    -- manage the background model daemon\n"
+              << "    mygit daemon <start|stop|status>    -- manage the local model daemon\n"
               << "\n";
 }
 

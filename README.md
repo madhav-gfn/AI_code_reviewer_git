@@ -300,5 +300,5 @@ This project was built with OpenAI Codex (powered by GPT-5.6) as the primary dev
 
 * **Spec-first feature development:** Every major module began as a written prompt spec handed to Codex. The actual working prompt library is checked into this repo at `docs/prompts.md`.
 * **Module scaffolding and iteration:** Codex generated first implementations of the subsystems, which were then reviewed, tightened, and integrated by hand. The architecture and its constraints live in `docs/architecture_review.md`.
-* **Toolchain debugging:** GPT-5.6 was used heavily to diagnose build failures (documented in `vcpkg-overlays/onnxruntime/`).
+* **Toolchain debugging:** GPT-5.6 was used heavily to diagnose build failures (documented in `client/vcpkg-overlays/onnxruntime/`).
 * **The dogfooding loop:** AI-written code did not get a free pass: every commit produced with Codex was reviewed by `mygit` itself before it was allowed into the repo. AI wrote the code, and an AI gatekeeper judged it.
