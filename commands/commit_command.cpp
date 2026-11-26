@@ -55,7 +55,9 @@ std::string display_path(const git::FileDiff& fd) {
 const daemon::DaemonClient& ensure_daemon(const daemon::DaemonClient& client, bool& ready) {
     if (!ready) {
         if (!client.ensure_running()) {
-            throw std::runtime_error("Daemon is unreachable and failed to auto-start.");
+            throw std::runtime_error(daemon::hosted_backend_selected()
+                ? "Hosted API is unavailable or rejected readiness; check MYGIT_API_URL and MYGIT_API_TOKEN."
+                : "Daemon is unreachable and failed to auto-start.");
         }
         ready = true;
     }
@@ -326,11 +328,13 @@ std::string open_editor_with(const std::string& initial_content) {
 }  // namespace
 
 int run_commit(const std::string& message) {
-    try {
-        config::load_config();  // fail fast with a clear message if not configured
-    } catch (const std::exception& e) {
-        std::cerr << "\n  " << e.what() << "\n\n";
-        return 1;
+    if (!daemon::hosted_backend_selected()) {
+        try {
+            config::load_config();  // fail fast with a clear message if not configured
+        } catch (const std::exception& e) {
+            std::cerr << "\n  " << e.what() << "\n\n";
+            return 1;
+        }
     }
 
     const git::GitDiff diff_provider;

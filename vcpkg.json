@@ -12,7 +12,10 @@
     "catch2",
     "llama-cpp",
     "libgit2",
-    "cpp-httplib",
+    {
+      "name": "cpp-httplib",
+      "features": ["openssl"]
+    },
     "onnxruntime",
     "faiss",
     "tree-sitter"

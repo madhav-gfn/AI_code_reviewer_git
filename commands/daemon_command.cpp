@@ -1,7 +1,10 @@
 #include "commands/daemon_command.h"
 
 #include <exception>
+#include <cstdlib>
 #include <iostream>
+#include <stdexcept>
+#include <string>
 
 #include "config/mygit_config.h"
 #include "daemon/daemon_client.h"
@@ -9,6 +12,20 @@
 #include "daemon/daemon_server.h"
 
 namespace mygit::commands {
+
+int run_hosted_api() {
+    try {
+        const char* mode = std::getenv("MYGIT_SERVER_MODE");
+        if (!mode || std::string(mode) != "hosted")
+            throw std::runtime_error("Set MYGIT_SERVER_MODE=hosted to start the hosted API");
+        daemon::DaemonServer server("", 0, daemon::resolve_port());
+        server.run();
+        return 0;
+    } catch (const std::exception& e) {
+        std::cerr << "Hosted API startup failed: " << e.what() << "\n";
+        return 1;
+    }
+}
 
 namespace {
 

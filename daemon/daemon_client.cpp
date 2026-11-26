@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <thread>
+#include <atomic>
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -23,8 +24,34 @@ constexpr int kHealthCheckReadTimeoutSec = 2;
 constexpr int kWorkReadTimeoutSec = 300;  // inference can be slow
 constexpr int kAutoStartTimeoutSec = 120;
 
+bool hosted_client() {
+    const char* mode = std::getenv("MYGIT_BACKEND");
+    if (!mode || !*mode || std::string(mode) == "local") return false;
+    if (std::string(mode) == "hosted") return true;
+    throw std::runtime_error("MYGIT_BACKEND must be either local or hosted");
+}
+
+std::string hosted_url() {
+    const char* url = std::getenv("MYGIT_API_URL");
+    if (!url || std::string(url).rfind("https://", 0) != 0)
+        throw std::runtime_error("Hosted mode requires MYGIT_API_URL beginning with https://");
+    return url;
+}
+
+httplib::Headers auth_headers() {
+    httplib::Headers headers;
+    static std::atomic<unsigned long long> request_id{0};
+    headers.emplace("X-Request-ID", "mygit-" + std::to_string(++request_id));
+    if (hosted_client()) {
+        const char* token = std::getenv("MYGIT_API_TOKEN");
+        if (!token || !*token) throw std::runtime_error("Hosted mode requires MYGIT_API_TOKEN");
+        headers.emplace("Authorization", std::string("Bearer ") + token);
+    }
+    return headers;
+}
+
 httplib::Client make_client(int port, int read_timeout_sec) {
-    httplib::Client cli("127.0.0.1", port);
+    httplib::Client cli = hosted_client() ? httplib::Client(hosted_url()) : httplib::Client("127.0.0.1", port);
     cli.set_connection_timeout(1, 0);  // localhost - 1s to connect is generous
     cli.set_read_timeout(read_timeout_sec, 0);
     cli.set_write_timeout(30, 0);
@@ -57,13 +84,30 @@ std::string make_request_error(const char* endpoint, const httplib::Result& res)
 
 DaemonClient::DaemonClient(int port) : port_(port) {}
 
+bool hosted_backend_selected() { return hosted_client(); }
+
 bool DaemonClient::is_running() const {
     httplib::Client cli = make_client(port_, kHealthCheckReadTimeoutSec);
-    auto res = cli.Get("/health");
-    return res && res->status == 200;
+    for (int attempt = 0; attempt < (hosted_client() ? 3 : 1); ++attempt) {
+        auto res = hosted_client() ? cli.Get("/live", auth_headers()) : cli.Get("/health");
+        if (res && res->status == 200) return true;
+        if (hosted_client() && attempt < 2) std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    }
+    return false;
 }
 
 bool wait_for_daemon_ready(int port, int timeout_seconds) {
+    if (hosted_client()) {
+        auto cli = make_client(port, kHealthCheckReadTimeoutSec);
+        const auto hosted_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(timeout_seconds);
+        do {
+            auto res = cli.Get("/ready", auth_headers());
+            if (res && res->status == 200) return true;
+            if (res && (res->status == 401 || res->status == 403)) return false;
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        } while (std::chrono::steady_clock::now() < hosted_deadline);
+        return false;
+    }
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(timeout_seconds);
     do {
         httplib::Client cli = make_client(port, kHealthCheckReadTimeoutSec);
@@ -130,6 +174,7 @@ void spawn_detached_daemon() {
 
 bool DaemonClient::ensure_running() const {
     if (is_running()) return true;
+    if (hosted_client()) return wait_for_daemon_ready(port_, kAutoStartTimeoutSec);
     spawn_detached_daemon();
     return wait_for_daemon_ready(port_, kAutoStartTimeoutSec);
 }
@@ -137,7 +182,7 @@ bool DaemonClient::ensure_running() const {
 std::string DaemonClient::review(const std::string& prompt) const {
     httplib::Client cli = make_client(port_, kWorkReadTimeoutSec);
     const nlohmann::json body = {{"prompt", prompt}};
-    auto res = cli.Post("/review", body.dump(), "application/json");
+    auto res = cli.Post("/review", auth_headers(), body.dump(), "application/json");
     if (!res || res->status != 200) throw std::runtime_error(make_request_error("/review", res));
     return res->body;
 }
@@ -145,7 +190,7 @@ std::string DaemonClient::review(const std::string& prompt) const {
 std::string DaemonClient::review(const ai::SplitPrompt& prompt) const {
     httplib::Client cli = make_client(port_, kWorkReadTimeoutSec);
     const nlohmann::json body = {{"prefix", prompt.prefix}, {"suffix", prompt.suffix}};
-    auto res = cli.Post("/review", body.dump(), "application/json");
+    auto res = cli.Post("/review", auth_headers(), body.dump(), "application/json");
     if (!res || res->status != 200) throw std::runtime_error(make_request_error("/review", res));
     return res->body;
 }
@@ -153,7 +198,7 @@ std::string DaemonClient::review(const ai::SplitPrompt& prompt) const {
 std::string DaemonClient::generate_commit_message(const std::string& prompt) const {
     httplib::Client cli = make_client(port_, kWorkReadTimeoutSec);
     const nlohmann::json body = {{"prompt", prompt}};
-    auto res = cli.Post("/commit", body.dump(), "application/json");
+    auto res = cli.Post("/commit", auth_headers(), body.dump(), "application/json");
     if (!res || res->status != 200) throw std::runtime_error(make_request_error("/commit", res));
     return res->body;
 }
@@ -161,12 +206,13 @@ std::string DaemonClient::generate_commit_message(const std::string& prompt) con
 std::string DaemonClient::generate_commit_message(const ai::SplitPrompt& prompt) const {
     httplib::Client cli = make_client(port_, kWorkReadTimeoutSec);
     const nlohmann::json body = {{"prefix", prompt.prefix}, {"suffix", prompt.suffix}};
-    auto res = cli.Post("/commit", body.dump(), "application/json");
+    auto res = cli.Post("/commit", auth_headers(), body.dump(), "application/json");
     if (!res || res->status != 200) throw std::runtime_error(make_request_error("/commit", res));
     return res->body;
 }
 
 bool DaemonClient::shutdown() const {
+    if (hosted_client()) return false;
     httplib::Client cli = make_client(port_, kHealthCheckReadTimeoutSec);
     auto res = cli.Post("/shutdown");
     return res && res->status == 200;

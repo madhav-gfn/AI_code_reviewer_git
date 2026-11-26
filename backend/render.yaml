@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: mygit-api-prototype
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /live
+    envVars:
+      - key: MYGIT_SERVER_MODE
+        value: hosted
+      - key: MYGIT_INFERENCE_BACKEND
+        value: stub
+      - key: MYGIT_API_TOKEN
+        sync: false

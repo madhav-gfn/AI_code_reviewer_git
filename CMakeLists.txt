@@ -226,6 +226,7 @@ target_compile_options(mygit_core PRIVATE
 # --- Executable ------------------------------------------------------------
 add_executable(mygit src/main.cpp)
 target_link_libraries(mygit PRIVATE mygit_core)
+install(TARGETS mygit RUNTIME DESTINATION bin)
 
 # --- Tests -------------------------------------------------------------
 option(MYGIT_BUILD_TESTS "Build unit tests" ON)

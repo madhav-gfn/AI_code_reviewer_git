@@ -62,4 +62,8 @@ void spawn_detached_daemon();
 // `timeout_seconds` elapses. Returns true once the daemon is reachable.
 bool wait_for_daemon_ready(int port, int timeout_seconds);
 
+// True when MYGIT_BACKEND explicitly selects hosted mode; invalid selections
+// throw so a typo never falls back to the local daemon.
+bool hosted_backend_selected();
+
 }  // namespace mygit::daemon

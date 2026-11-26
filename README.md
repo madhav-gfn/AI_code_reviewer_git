@@ -221,8 +221,13 @@ Preventing the model from analyzing excessive diffs or binary/non-text files (li
 | `mygit commit -m "msg"` | Runs a review. If it passes, commits using your provided message. |
 | `mygit push <remote> <branch>` | Runs a review. If it passes, pushes the code upstream. |
 | `mygit history` | Displays a table of your most recent AI reviews and verdicts. |
+| `mygit serve` | Runs the hosted API in explicitly configured hosted mode. |
 
 > **Override Flag:** Append `--force-ai` to `commit` or `push` to bypass blocking issues.
+
+### Hosted API prototype
+
+The Render Blueprint and Dockerfile are under [`backend/`](backend/README.md). The hosted API currently runs an authenticated stub for transport validation only; it does not perform code reviews. Set `MYGIT_API_TOKEN` as a Render secret (at least 24 characters). To point a CLI at a compatible deployed endpoint, set `MYGIT_BACKEND=hosted`, `MYGIT_API_URL=https://your-service.example`, and `MYGIT_API_TOKEN` in its environment. The CLI does not fall back to local inference when hosted mode is selected. The local daemon remains the default when `MYGIT_BACKEND` is unset. A browser frontend does not exist yet; [`frontend/`](frontend/README.md) documents its deployment boundary.
 
 ---
 

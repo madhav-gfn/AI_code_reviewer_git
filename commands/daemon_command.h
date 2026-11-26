@@ -9,5 +9,6 @@ namespace mygit::commands {
 // "daemon" on the command line (e.g. {"start", "-d"}). Returns a process
 // exit code.
 int run_daemon(const std::vector<std::string>& args);
+int run_hosted_api();
 
 }  // namespace mygit::commands
