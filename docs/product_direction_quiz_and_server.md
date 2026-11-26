@@ -13,7 +13,7 @@ The quiz is a comprehension check, not a correctness verdict or a replacement fo
 
 - `mygit push` currently reads the **staged diff**, reviews it locally with `LlamaClient`, and runs `git push` if the decision engine allows it. See `commands/push_command.cpp`.
 - This does not represent all outgoing commits. A push can include already committed changes that are not staged, and may have no staged changes at all.
-- A local HTTP daemon already exists. It binds to `127.0.0.1`, holds a local `LlamaClient`, and exposes review/commit work to the CLI. It is a local model process, not a remotely deployable service. See `daemon/daemon_server.cpp` and `daemon/daemon_client.cpp`.
+- The local HTTP daemon binds to `127.0.0.1`, holds a local `LlamaClient`, and exposes review/commit work to the CLI. The server process is in `daemon/`; client transport is in `client/daemon_client.cpp`.
 - Repository context building blocks exist in `rag/`: Tree-sitter code units, text chunks, embeddings, and retrieval. They can supply nearby symbols and existing code to quiz generation, subject to the configured embedding assets being available.
 - The current types and prompt paths focus on review issues and commit messages. There is no quiz session, question/answer API, quiz persistence, or push-range collection yet.
 

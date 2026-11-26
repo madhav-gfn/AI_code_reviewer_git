@@ -2,7 +2,7 @@ services:
   - type: web
     name: mygit-api-prototype
     runtime: docker
-    dockerfilePath: ./backend/Dockerfile
+    dockerfilePath: ./daemon/Dockerfile
     dockerContext: .
     plan: free
     healthCheckPath: /live

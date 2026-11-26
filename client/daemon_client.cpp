@@ -1,4 +1,4 @@
-#include "daemon/daemon_client.h"
+#include "daemon_client.h"
 
 #include <httplib.h>
 #include <nlohmann/json.hpp>
@@ -8,6 +8,9 @@
 #include <stdexcept>
 #include <thread>
 #include <atomic>
+#include <filesystem>
+
+#include "config/mygit_config.h"
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -75,6 +78,39 @@ std::string current_executable_path() {
 }
 #endif
 
+#if defined(_WIN32)
+std::string quote_windows_arg(const std::string& arg) {
+    std::string quoted = "\"";
+    size_t slashes = 0;
+    for (char ch : arg) {
+        if (ch == '\\') {
+            ++slashes;
+        } else if (ch == '"') {
+            quoted.append(slashes * 2 + 1, '\\');
+            quoted += ch;
+            slashes = 0;
+        } else {
+            quoted.append(slashes, '\\');
+            quoted += ch;
+            slashes = 0;
+        }
+    }
+    quoted.append(slashes * 2, '\\');
+    quoted += '"';
+    return quoted;
+}
+#else
+std::string quote_shell_arg(const std::string& arg) {
+    std::string quoted = "'";
+    for (char ch : arg) {
+        if (ch == '\'') quoted += "'\\''";
+        else quoted += ch;
+    }
+    quoted += '\'';
+    return quoted;
+}
+#endif
+
 std::string make_request_error(const char* endpoint, const httplib::Result& res) {
     return std::string("Daemon ") + endpoint + " request failed: " +
            (res ? res->body : std::string("no response (daemon unreachable)"));
@@ -119,9 +155,18 @@ bool wait_for_daemon_ready(int port, int timeout_seconds) {
 }
 
 void spawn_detached_daemon() {
-    const std::string exe = current_executable_path();
+    std::filesystem::path daemon_path = current_executable_path();
 #if defined(_WIN32)
-    std::string cmdline = "\"" + exe + "\" daemon start";
+    daemon_path.replace_filename("mygit_daemon.exe");
+#else
+    daemon_path.replace_filename("mygit_daemon");
+#endif
+    const std::string exe = daemon_path.string();
+    const config::MygitConfig config = config::load_config();
+#if defined(_WIN32)
+    std::string cmdline = quote_windows_arg(exe) + " --model-path " +
+                          quote_windows_arg(config.model_path) + " --gpu-layers " +
+                          std::to_string(config.gpu_layers);
 
     // The detached process has no console, so stdout/stderr are invalid
     // handles. Model loading (llama.cpp), spdlog, and ONNX Runtime all
@@ -167,7 +212,9 @@ void spawn_detached_daemon() {
 #else
     // Simple POSIX fallback: background the process via the shell so it
     // detaches from the current terminal session.
-    const std::string cmd = "\"" + exe + "\" daemon start >/dev/null 2>&1 &";
+    const std::string cmd = quote_shell_arg(exe) + " --model-path " +
+                            quote_shell_arg(config.model_path) + " --gpu-layers " +
+                            std::to_string(config.gpu_layers) + " >/dev/null 2>&1 &";
     std::system(cmd.c_str());
 #endif
 }

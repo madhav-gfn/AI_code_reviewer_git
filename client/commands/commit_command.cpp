@@ -20,7 +20,7 @@
 #include <unistd.h>
 #endif
 #include "config/mygit_config.h"
-#include "daemon/daemon_client.h"
+#include "daemon_client.h"
 #include "database/async_db_writer.h"
 #include "database/sqlite_manager.h"
 #include "decision_engine/decision_engine.h"

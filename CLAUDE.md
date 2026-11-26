@@ -53,7 +53,7 @@ file needs to be added to the `mygit_tests` executable's source list there, it i
 **Flow:** `src/main.cpp` parses argv and dispatches to `commands/*` (one file per subcommand:
 `review`, `commit`, `push`, `history`, `init`, `setup`, `install`, `daemon`). Commands pull a diff
 from `git/` (libgit2-backed), optionally enrich it with retrieved context from `rag/`, build a prompt
-via `ai/prompt_builder`, send it to the daemon via `ai/llama_client` + `daemon/daemon_client`, parse
+via `shared/ai/prompt_builder`, send it to the daemon via `shared/ai/llama_client` + `client/daemon_client`, parse
 the grammar-guaranteed JSON response with `parsers/json_parser`, evaluate it with
 `decision_engine/decision_engine`, persist the verdict via `database/` (async), and render output
 with `ui/terminal_ui` (FTXUI).
@@ -63,9 +63,9 @@ with `ui/terminal_ui` (FTXUI).
 don't drop that, the `x64-windows-release` vcpkg triplet defaults to dynamic linkage, and nothing in
 this codebase is `__declspec(dllexport)`-annotated, so a shared build silently exports zero symbols.
 
-**Daemon architecture:** the model is expensive to load, so `daemon/daemon_server` runs it in a
+**Daemon architecture:** the model is expensive to load, so `daemon/server` runs it in a
 long-lived background HTTP process (`/review`, `/commit`, `/health`, `/shutdown`); `commands/*` talk
-to it through `daemon/daemon_client`, which auto-spawns the daemon if it isn't already running and
+to it through `client/daemon_client`, which auto-spawns the local daemon if it isn't already running and
 polls `/health`. The daemon self-shuts-down after 15 minutes idle. If you're changing request/response
 shapes, both `daemon_server.cpp` and `daemon_client.h` need to agree, and so does whatever `ai/*`
 prompt-building code constructs the payload.

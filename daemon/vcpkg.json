@@ -1,0 +1,15 @@
+{
+  "name": "mygit-daemon",
+  "version": "0.1.0",
+  "builtin-baseline": "4bc3a47c7a63506e215e04e1473368adbaea6c27",
+  "dependencies": [
+    "nlohmann-json",
+    "fmt",
+    "spdlog",
+    "llama-cpp",
+    {
+      "name": "cpp-httplib",
+      "features": ["openssl"]
+    }
+  ]
+}

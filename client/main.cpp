@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "commands/commit_command.h"
-#include "commands/daemon_command.h"
 #include "commands/history_command.h"
 #include "commands/init_command.h"
 #include "commands/install_command.h"
@@ -26,7 +25,6 @@ void print_usage() {
               << "    mygit history                       -- show last 10 reviews\n"
               << "    mygit init                          -- build RAG embedding index for this repo\n"
               << "    mygit daemon <start|stop|status>    -- manage the background model daemon\n"
-              << "    mygit serve                        -- run hosted API (MYGIT_SERVER_MODE=hosted)\n"
               << "\n";
 }
 
@@ -93,10 +91,6 @@ int main(int argc, char** argv) {
 
         if (command == "daemon") {
             return mygit::commands::run_daemon(std::vector<std::string>(args.begin() + 1, args.end()));
-        }
-
-        if (command == "serve") {
-            return mygit::commands::run_hosted_api();
         }
 
         std::cerr << "\n  Unknown command: " << command << "\n";

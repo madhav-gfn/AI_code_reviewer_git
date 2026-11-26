@@ -221,13 +221,12 @@ Preventing the model from analyzing excessive diffs or binary/non-text files (li
 | `mygit commit -m "msg"` | Runs a review. If it passes, commits using your provided message. |
 | `mygit push <remote> <branch>` | Runs a review. If it passes, pushes the code upstream. |
 | `mygit history` | Displays a table of your most recent AI reviews and verdicts. |
-| `mygit serve` | Runs the hosted API in explicitly configured hosted mode. |
 
 > **Override Flag:** Append `--force-ai` to `commit` or `push` to bypass blocking issues.
 
 ### Hosted API prototype
 
-The Render Blueprint and Dockerfile are under [`backend/`](backend/README.md). The hosted API currently runs an authenticated stub for transport validation only; it does not perform code reviews. Set `MYGIT_API_TOKEN` as a Render secret (at least 24 characters). To point a CLI at a compatible deployed endpoint, set `MYGIT_BACKEND=hosted`, `MYGIT_API_URL=https://your-service.example`, and `MYGIT_API_TOKEN` in its environment. The CLI does not fall back to local inference when hosted mode is selected. The local daemon remains the default when `MYGIT_BACKEND` is unset. A browser frontend does not exist yet; [`frontend/`](frontend/README.md) documents its deployment boundary.
+The repository is split into [`client/`](client/README.md) for the user's machine, [`daemon/`](daemon/README.md) for the HTTP server and deployment, and [`shared/`](shared/README.md) for code compiled into either process. Build from the repository root with CMake; the default build produces `mygit` and `mygit_daemon`. Install both for local inference; the hosted container installs only the daemon. The hosted API currently runs an authenticated stub for transport validation only; it does not perform code reviews. Set `MYGIT_API_TOKEN` as a Render secret (at least 24 characters). To point a CLI at a compatible deployed endpoint, set `MYGIT_BACKEND=hosted`, `MYGIT_API_URL=https://your-service.example`, and `MYGIT_API_TOKEN` in its environment. The CLI does not fall back to local inference when hosted mode is selected. The local daemon remains the default when `MYGIT_BACKEND` is unset.
 
 ---
 
@@ -272,23 +271,23 @@ Restart your terminal, and you can now run `mygit` from anywhere!
 
 ## RAG Setup Guide (Optional)
 
-By default, `mygit` runs in **zero-RAG fallback mode**. If `models/embedding_model.onnx` and `models/tokenizer.json` are missing, it falls back gracefully. To enable real retrieval:
+By default, `mygit` runs in **zero-RAG fallback mode**. If `client/models/embedding_model.onnx` and `client/models/tokenizer.json` are missing, it falls back gracefully. To enable real retrieval:
 
 ### Step 1: Get an embedding model
 Download an embedding model (e.g., Qodo-Embed-1-1.5B) and export it to ONNX format using the provided scripts.
 ```bash
 git lfs install
-git clone https://huggingface.co/Qodo/Qodo-Embed-1-1.5B model_customization/Qodo-Embed-1-1.5B
-python -m venv model_customization/venv
-model_customization/venv/bin/pip install torch transformers onnx onnxruntime
-model_customization/venv/bin/python scripts/export_embedding_model_onnx.py
+git clone https://huggingface.co/Qodo/Qodo-Embed-1-1.5B client/model_customization/Qodo-Embed-1-1.5B
+python -m venv client/model_customization/venv
+client/model_customization/venv/bin/pip install torch transformers onnx onnxruntime
+client/model_customization/venv/bin/python client/scripts/export_embedding_model_onnx.py
 ```
-This produces the necessary `.onnx` and `tokenizer.json` files in the `models/` directory. `mygit` will automatically detect them on the next run.
+This exports files under `client/models/`. Copy `embedding_model.onnx` and `tokenizer.json` into `~/.mygit/models/` (or `%USERPROFILE%\\.mygit\\models\\` on Windows), where the client looks for optional RAG assets.
 
 ### Step 2: GPU-accelerated embeddings (optional)
 For GPU acceleration, install cuDNN manually and rebuild `onnxruntime` with CUDA using the provided vcpkg overlays.
 ```bash
-export VCPKG_OVERLAY_PORTS="<repo>/vcpkg-overlays"
+export VCPKG_OVERLAY_PORTS="<repo>/client/vcpkg-overlays"
 cmake -B build -S . -DVCPKG_MANIFEST_FEATURES=onnx-cuda -DMYGIT_ENABLE_ONNX_CUDA=ON
 cmake --build build --target mygit
 ```

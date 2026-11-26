@@ -3,7 +3,7 @@
 #include <string>
 
 #include "ai/prompt_builder.h"
-#include "daemon/daemon_config.h"
+#include "daemon/config.h"
 
 namespace mygit::daemon {
 

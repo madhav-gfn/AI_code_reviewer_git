@@ -6,21 +6,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN git clone --depth 1 https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT" \
     && "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
 WORKDIR /src
-# Build context is the repository root (see backend/render.yaml).
+# Build context is the repository root (see daemon/render.yaml).
 COPY . .
 RUN cmake -S . -B build -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
-    -DVCPKG_TARGET_TRIPLET=x64-linux-dynamic -DMYGIT_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release \
-    && cmake --build build --target mygit --parallel 2 \
-    && cmake --install build --prefix /opt/mygit
+    -DVCPKG_MANIFEST_DIR=/src/daemon -DVCPKG_INSTALLED_DIR=/src/build/vcpkg_installed \
+    -DVCPKG_TARGET_TRIPLET=x64-linux-dynamic -DMYGIT_BUILD_CLIENT=OFF -DMYGIT_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build build --target mygit_daemon --parallel 2 \
+    && cmake --install build --prefix /opt/mygit --component daemon
 
 FROM ubuntu:24.04 AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libstdc++6 libgcc-s1 libssl3t64 libgomp1 \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --system --uid 10001 --create-home mygit
 COPY --from=build /opt/mygit /opt/mygit
-COPY --from=build /src/vcpkg_installed/x64-linux-dynamic/lib /opt/mygit/lib
+COPY --from=build /src/build/vcpkg_installed/x64-linux-dynamic/lib /opt/mygit/lib
 ENV PATH=/opt/mygit/bin:$PATH LD_LIBRARY_PATH=/opt/mygit/lib MYGIT_SERVER_MODE=hosted MYGIT_INFERENCE_BACKEND=stub
 USER mygit
 EXPOSE 10000
-CMD ["mygit", "serve"]
+CMD ["mygit_daemon"]

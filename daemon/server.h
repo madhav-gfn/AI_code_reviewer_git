@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-#include "daemon/daemon_config.h"
+#include "daemon/config.h"
 
 namespace mygit::daemon {
 
